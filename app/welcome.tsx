@@ -79,7 +79,7 @@ export default function WelcomeBackScreen() {
 			<ThemedButton title='Forgot Password?' variant='text' style={styles.forgotPassword} onPress={() => router.navigate("/forgot")} disabled={loading} />
 
 			{/* Login Button */}
-			<ThemedButton title={loading ? "Logging in..." : "Login"} variant='primary' style={styles.loginButton} onPress={handleSignIn} disabled={loading} />
+			<ThemedButton title='Login' variant='primary' style={styles.loginButton} onPress={handleSignIn} loading={loading} disabled={loading} />
 
 			{/* Sign Up Link */}
 			<View style={styles.signupContainer}>

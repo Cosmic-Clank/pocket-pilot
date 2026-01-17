@@ -96,11 +96,11 @@ export default function VerifyEmailScreen() {
 				}}
 			/>
 
-			<ThemedButton title={loading ? "Verifying..." : "Verify Email"} variant='primary' style={styles.verifyButton} disabled={code.length !== 6 || loading} onPress={handleVerify} />
+			<ThemedButton title='Verify Email' variant='primary' style={styles.verifyButton} loading={loading} disabled={code.length !== 6 || loading} onPress={handleVerify} />
 
 			<View style={styles.resendContainer}>
 				<Text style={styles.resendText}>Didn't receive the code? </Text>
-				<ThemedButton title={resendLoading ? "Sending..." : "Resend"} variant='text' style={styles.resendButton} disabled={resendLoading} onPress={handleResend} />
+				<ThemedButton title='Resend' variant='text' style={styles.resendButton} loading={resendLoading} disabled={resendLoading} onPress={handleResend} />
 			</View>
 
 			<ThemedAlert visible={alert.visible} title={alert.title} message={alert.message} onDismiss={() => setAlert({ ...alert, visible: false })} />

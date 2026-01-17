@@ -1,4 +1,4 @@
-import { StyleSheet, TouchableOpacity, Text, type TouchableOpacityProps, type ViewStyle, type TextStyle } from "react-native";
+import { StyleSheet, TouchableOpacity, Text, ActivityIndicator, type TouchableOpacityProps, type ViewStyle, type TextStyle } from "react-native";
 import * as Haptics from "expo-haptics";
 
 export type ThemedButtonProps = TouchableOpacityProps & {
@@ -8,20 +8,30 @@ export type ThemedButtonProps = TouchableOpacityProps & {
 	onPress?: () => void;
 	enableHaptic?: boolean;
 	icon?: React.ReactNode;
+	loading?: boolean;
 };
 
-export function ThemedButton({ title, variant = "primary", style, textStyle, onPress, enableHaptic = true, icon, disabled, ...rest }: ThemedButtonProps) {
+export function ThemedButton({ title, variant = "primary", style, textStyle, onPress, enableHaptic = true, icon, disabled, loading = false, ...rest }: ThemedButtonProps) {
+	const isDisabled = disabled || loading;
+
 	const handlePress = () => {
-		if (disabled) return;
+		if (isDisabled) return;
 		if (enableHaptic) {
 			Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 		}
 		onPress?.();
 	};
 
+	const getSpinnerColor = () => {
+		if (variant === "primary") return "#FFFFFF";
+		if (variant === "text") return "#155DFC";
+		return "#000000";
+	};
+
 	return (
-		<TouchableOpacity style={[styles.base, variant === "primary" && styles.primary, variant === "outline" && styles.outline, variant === "text" && styles.text, disabled && styles.disabled, style]} onPress={handlePress} disabled={disabled} activeOpacity={disabled ? 1 : 0.2} {...rest}>
-			{icon && <>{icon}</>}
+		<TouchableOpacity style={[styles.base, variant === "primary" && styles.primary, variant === "outline" && styles.outline, variant === "text" && styles.text, isDisabled && styles.disabled, style]} onPress={handlePress} disabled={isDisabled} activeOpacity={isDisabled ? 1 : 0.2} {...rest}>
+			{loading && <ActivityIndicator size='small' color={getSpinnerColor()} />}
+			{!loading && icon && <>{icon}</>}
 			<Text style={[styles.baseText, variant === "primary" && styles.primaryText, variant === "outline" && styles.outlineText, variant === "text" && styles.textButtonText, textStyle]}>{title}</Text>
 		</TouchableOpacity>
 	);

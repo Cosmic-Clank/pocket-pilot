@@ -11,7 +11,6 @@ import { ThemedPasswordInput } from "@/components/themed-password-input";
 import { ThemedAlert } from "@/components/themed-alert";
 import { supabase } from "@/utils/supabase";
 import { Toast } from "toastify-react-native";
-import { StatusBar } from "expo-status-bar";
 
 export default function CreateAccountScreen() {
 	const insets = useSafeAreaInsets();
@@ -94,7 +93,7 @@ export default function CreateAccountScreen() {
 					</Text>
 				</View>
 
-				<ThemedButton title={loading ? "Creating..." : "Create Account"} variant='primary' style={styles.createButton} disabled={loading || !isFormValid} onPress={handleCreateAccount} />
+				<ThemedButton title='Create Account' variant='primary' style={styles.createButton} loading={loading} disabled={loading || !isFormValid} onPress={handleCreateAccount} />
 			</View>
 
 			<View style={styles.footer}>
