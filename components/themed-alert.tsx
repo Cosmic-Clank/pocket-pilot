@@ -1,5 +1,5 @@
 import React from "react";
-import { StyleSheet, View, Modal, TouchableOpacity } from "react-native";
+import { StyleSheet, View, Modal, TouchableOpacity, ActivityIndicator } from "react-native";
 import { ThemedText } from "./themed-text";
 
 interface ThemedAlertProps {
@@ -13,9 +13,10 @@ interface ThemedAlertProps {
 	confirmText?: string;
 	cancelText?: string;
 	okText?: string;
+	loading?: boolean;
 }
 
-export function ThemedAlert({ visible, title, message, variant = "alert", onDismiss, onConfirm, onCancel, confirmText = "Yes", cancelText = "Cancel", okText = "OK" }: ThemedAlertProps) {
+export function ThemedAlert({ visible, title, message, variant = "alert", onDismiss, onConfirm, onCancel, confirmText = "Yes", cancelText = "Cancel", okText = "OK", loading = false }: ThemedAlertProps) {
 	return (
 		<Modal transparent visible={visible} animationType='fade'>
 			<View style={styles.overlay}>
@@ -24,16 +25,16 @@ export function ThemedAlert({ visible, title, message, variant = "alert", onDism
 					<ThemedText style={styles.message}>{message}</ThemedText>
 
 					{variant === "alert" ? (
-						<TouchableOpacity style={styles.button} onPress={onDismiss}>
+						<TouchableOpacity style={[styles.button, loading && styles.buttonDisabled]} onPress={onDismiss} disabled={loading}>
 							<ThemedText style={styles.buttonText}>{okText}</ThemedText>
 						</TouchableOpacity>
 					) : (
 						<View style={styles.buttonRow}>
-							<TouchableOpacity style={[styles.button, styles.cancelButton]} onPress={onCancel}>
+							<TouchableOpacity style={[styles.button, styles.cancelButton, loading && styles.buttonDisabled]} onPress={onCancel} disabled={loading}>
 								<ThemedText style={[styles.buttonText, styles.cancelButtonText]}>{cancelText}</ThemedText>
 							</TouchableOpacity>
-							<TouchableOpacity style={[styles.button, styles.confirmButton]} onPress={onConfirm}>
-								<ThemedText style={styles.buttonText}>{confirmText}</ThemedText>
+							<TouchableOpacity style={[styles.button, styles.confirmButton, loading && styles.buttonDisabled]} onPress={onConfirm} disabled={loading}>
+								{loading ? <ActivityIndicator color='#FFFFFF' /> : <ThemedText style={styles.buttonText}>{confirmText}</ThemedText>}
 							</TouchableOpacity>
 						</View>
 					)}
@@ -94,5 +95,8 @@ const styles = StyleSheet.create({
 	},
 	cancelButtonText: {
 		color: "#6B7280",
+	},
+	buttonDisabled: {
+		opacity: 0.7,
 	},
 });

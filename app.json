@@ -42,11 +42,18 @@
       ],
       "expo-sqlite",
       "expo-secure-store",
-      "expo-font"
+      "expo-font",
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "50e3ed69-7c00-432f-bd36-4d16544d3022"
+      }
     }
   }
 }
