@@ -9,6 +9,7 @@ import { MediaPicker } from "@/components/media-picker";
 import { ThemedAlert } from "@/components/themed-alert";
 import { type ImagePickerAsset } from "expo-image-picker";
 import { saveExpense } from "@/services/transaction-service";
+import { CATEGORIES } from "@/constants/config";
 
 interface ManualEntryFormProps {
 	initialTitle?: string;
@@ -33,17 +34,7 @@ export const ManualEntryForm = ({ initialTitle = "", initialAmount = "", initial
 	const [alertVisible, setAlertVisible] = useState(false);
 	const [alertContent, setAlertContent] = useState<{ title: string; message: string }>({ title: "", message: "" });
 
-	const categoryOptions: SelectOption[] = [
-		{ label: "Transport", value: "transport" },
-		{ label: "Entertainment", value: "entertainment" },
-		{ label: "Groceries", value: "groceries" },
-		{ label: "Food", value: "food" },
-		{ label: "Shopping", value: "shopping" },
-		{ label: "Bills", value: "bills" },
-		{ label: "Health", value: "health" },
-		{ label: "Education", value: "education" },
-		{ label: "Other", value: "other" },
-	];
+	const categoryOptions: SelectOption[] = CATEGORIES;
 
 	const typeOptions: SelectOption[] = [
 		{ label: "Expense", value: "expense" },

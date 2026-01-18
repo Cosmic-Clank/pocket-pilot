@@ -21,20 +21,49 @@ export const getApiUrl = (endpoint: string): string => {
 };
 
 /**
+ * Transaction & Budget Categories
+ * Used across the app for dropdowns and icon mapping
+ */
+export const CATEGORIES = [
+	{ label: "Transport", value: "transport" },
+	{ label: "Entertainment", value: "entertainment" },
+	{ label: "Groceries", value: "groceries" },
+	{ label: "Food", value: "food" },
+	{ label: "Shopping", value: "shopping" },
+	{ label: "Bills", value: "bills" },
+	{ label: "Health", value: "health" },
+	{ label: "Education", value: "education" },
+	{ label: "Other", value: "other" },
+];
+
+export const CATEGORY_ICON_MAP: { [key: string]: any } = {
+	transport: "truck",
+	entertainment: "film",
+	groceries: "shopping-cart",
+	food: "coffee",
+	shopping: "shopping-bag",
+	bills: "file-text",
+	health: "heart",
+	education: "book",
+	other: "tag",
+};
+
+/**
  * Usage in components:
  *
- * import { API_CONFIG, getApiUrl } from "@/constants/config";
+ * import { API_CONFIG, getApiUrl, CATEGORIES, CATEGORY_ICON_MAP } from "@/constants/config";
  *
- * // Option 1: Use BASE_URL + endpoint
- * const url = `${API_CONFIG.BASE_URL}${API_CONFIG.ENDPOINTS.PROCESS_RECEIPT}`;
- *
- * // Option 2: Use helper function
+ * // For API:
  * const url = getApiUrl(API_CONFIG.ENDPOINTS.PROCESS_RECEIPT);
  *
- * // Then use in fetch:
- * const response = await fetch(url, {
- *   method: "POST",
- *   headers: { "Content-Type": "application/json" },
- *   body: JSON.stringify(data)
- * });
+ * // For categories dropdown:
+ * <Picker selectedValue={category} onValueChange={setCategory}>
+ *   {CATEGORIES.map((cat) => (
+ *     <Picker.Item key={cat.value} label={cat.label} value={cat.value} />
+ *   ))}
+ * </Picker>
+ *
+ * // For icons:
+ * const iconName = CATEGORY_ICON_MAP[category] || "tag";
+ * <Feather name={iconName} size={20} />
  */
