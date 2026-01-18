@@ -19,6 +19,7 @@ interface Expense {
 	id: string;
 	name: string;
 	category: string;
+	type: string;
 	date: string;
 	amount: number;
 	icon: FeatherIconName;
@@ -28,14 +29,15 @@ interface Expense {
 }
 
 const categoryIconMap: { [key: string]: FeatherIconName } = {
-	Transport: "truck",
-	Entertainment: "film",
-	Food: "coffee",
-	Shopping: "shopping-bag",
-	Bills: "file-text",
-	Health: "heart",
-	Education: "book",
-	Other: "tag",
+	transport: "truck",
+	entertainment: "film",
+	groceries: "shopping-cart",
+	food: "coffee",
+	shopping: "shopping-bag",
+	bills: "file-text",
+	health: "heart",
+	education: "book",
+	other: "tag",
 };
 
 export default function ExpenseScreen() {
@@ -43,7 +45,8 @@ export default function ExpenseScreen() {
 	const addExpenseModalRef = useRef<BottomSheetModal>(null);
 	const [expenses, setExpenses] = useState<Expense[]>([]);
 	const [loading, setLoading] = useState(true);
-	const [totalAmount, setTotalAmount] = useState(0);
+	const [totalSpent, setTotalSpent] = useState(0);
+	const [totalIncome, setTotalIncome] = useState(0);
 	const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
 	const [detailVisible, setDetailVisible] = useState(false);
 	const [deleteAlertVisible, setDeleteAlertVisible] = useState(false);
@@ -62,7 +65,7 @@ export default function ExpenseScreen() {
 			const { data: authData } = await supabase.auth.getUser();
 			if (!authData?.user?.id) return;
 
-			const { data, error } = await supabase.from("transactions").select("*").eq("user_id", authData.user.id).eq("type", "expense").order("transaction_date", { ascending: false });
+			const { data, error } = await supabase.from("transactions").select("*").eq("user_id", authData.user.id).order("transaction_date", { ascending: false });
 
 			if (error) throw error;
 
@@ -70,21 +73,22 @@ export default function ExpenseScreen() {
 				id: transaction.id,
 				name: transaction.title,
 				category: transaction.category,
+				type: transaction.type,
+				amount: transaction.amount || 0,
+				icon: categoryIconMap[transaction.category] || "tag",
 				date: new Date(transaction.transaction_date).toLocaleDateString("en-US", {
-					month: "2-digit",
 					day: "2-digit",
+					month: "2-digit",
 					year: "numeric",
 				}),
-				amount: transaction.amount,
-				icon: (categoryIconMap[transaction.category] || "tag") as FeatherIconName,
-				receiptUrl: transaction.receipt_url || null,
 				notes: transaction.notes || null,
 				transactionDate: transaction.transaction_date,
+				receiptUrl: transaction.receipt_url || null,
 			}));
 
 			setExpenses(formattedExpenses);
 
-			// Calculate total for only this month
+			// Calculate totals for this month (expenses and income)
 			const now = new Date();
 			const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 			const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
@@ -92,11 +96,19 @@ export default function ExpenseScreen() {
 			const thisMonthTotal = formattedExpenses
 				.filter((exp) => {
 					const expDate = new Date(exp.transactionDate);
-					return expDate >= startOfMonth && expDate <= endOfMonth;
+					return expDate >= startOfMonth && expDate <= endOfMonth && exp.type === "expense";
 				})
 				.reduce((sum, exp) => sum + exp.amount, 0);
 
-			setTotalAmount(thisMonthTotal);
+			const thisMonthIncome = formattedExpenses
+				.filter((exp) => {
+					const expDate = new Date(exp.transactionDate);
+					return expDate >= startOfMonth && expDate <= endOfMonth && exp.type === "income";
+				})
+				.reduce((sum, exp) => sum + exp.amount, 0);
+
+			setTotalSpent(thisMonthTotal);
+			setTotalIncome(thisMonthIncome);
 		} catch (error) {
 			console.error("Failed to fetch expenses:", error);
 		} finally {
@@ -150,14 +162,18 @@ export default function ExpenseScreen() {
 
 	const renderExpenseItem = ({ item }: { item: Expense }) => (
 		<Pressable style={styles.expenseCard} onPress={() => handleSelectExpense(item)}>
-			<View style={styles.expenseIconContainer}>
-				<Feather name={item.icon} size={20} color='#717182' />
+			<View style={[styles.expenseIconContainer, { backgroundColor: item.type === "income" ? "#DCFCE7" : "#FEE2E2" }]}>
+				<Feather name={item.type === "income" ? "dollar-sign" : item.icon} size={20} color={item.type === "income" ? "#16A34A" : "#DC2626"} />
 			</View>
 			<View style={styles.expenseInfo}>
 				<View style={styles.expenseTop}>
 					<ThemedText style={styles.expenseName}>{item.name}</ThemedText>
 					<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-						<ThemedText style={styles.expenseAmount}>${item.amount.toFixed(2)}</ThemedText>
+						<View style={{ alignItems: "flex-end" }}>
+							<ThemedText style={[styles.expenseAmount, { color: item.type === "income" ? "#16A34A" : "#DC2626" }]}>
+								{item.type === "income" ? "+" : "-"}${item.amount.toFixed(2)}
+							</ThemedText>
+						</View>
 						<Pressable
 							onPress={(e) => {
 								e.stopPropagation?.();
@@ -182,33 +198,41 @@ export default function ExpenseScreen() {
 					{/* Header */}
 					<View style={styles.header}>
 						<ThemedText type='title' style={styles.title}>
-							Expenses
+							Transactions
 						</ThemedText>
 					</View>
 
-					{/* Total Expenses Card */}
+					{/* Totals Card */}
 					<LinearGradient colors={["#FB2C36", "#E60076"]} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={styles.totalCard}>
-						<ThemedText style={styles.totalLabel}>Total Expenses</ThemedText>
-						<ThemedText style={styles.totalAmount}>${totalAmount.toFixed(2)}</ThemedText>
-						<ThemedText style={styles.totalPeriod}>This month</ThemedText>
+						<View style={styles.totalRow}>
+							<View style={styles.totalColLeft}>
+								<ThemedText style={styles.totalLabel}>Total Spent</ThemedText>
+								<ThemedText style={[styles.totalSpent, { color: "#FEE2E2" }]}>-${totalSpent.toFixed(2)}</ThemedText>
+							</View>
+							<View style={styles.totalColRight}>
+								<ThemedText style={styles.totalLabel}>Total Earned</ThemedText>
+								<ThemedText style={[styles.totalSpent, { color: "#BBF7D0" }]}>+${totalIncome.toFixed(2)}</ThemedText>
+							</View>
+						</View>
+						<ThemedText style={styles.totalPeriod}>This Month</ThemedText>
 					</LinearGradient>
 
 					{/* Add New Expense Button */}
-					<ThemedButton title='Add New Expense' variant='primary' icon={<Feather name='plus' size={20} color='#FFFFFF' />} style={styles.addButton} onPress={() => addExpenseModalRef.current?.present()} />
+					<ThemedButton title='Add New Transaction' variant='primary' icon={<Feather name='plus' size={20} color='#FFFFFF' />} style={styles.addButton} onPress={() => addExpenseModalRef.current?.present()} />
 
 					{/* Recent Expenses Section */}
 					<View style={styles.recentSection}>
-						<ThemedText style={styles.sectionTitle}>Recent Expenses</ThemedText>
+						<ThemedText style={styles.sectionTitle}>Recent Transactions</ThemedText>
 					</View>
 
-					{/* Expenses List */}
+					{/* Transactions List */}
 					{loading ? (
 						<View style={styles.loadingContainer}>
 							<ActivityIndicator size='large' color='#155DFC' />
 						</View>
 					) : expenses.length === 0 ? (
 						<View style={styles.emptyContainer}>
-							<ThemedText style={styles.emptyText}>No expenses yet. Add one to get started!</ThemedText>
+							<ThemedText style={styles.emptyText}>No transactions yet. Add one to get started!</ThemedText>
 						</View>
 					) : (
 						<FlatList data={expenses} renderItem={renderExpenseItem} keyExtractor={(item) => item.id} scrollEnabled={true} contentContainerStyle={styles.expensesList} style={styles.flatListContainer} />
@@ -238,7 +262,7 @@ export default function ExpenseScreen() {
 					</Modal>
 				)}
 
-				<ThemedAlert visible={deleteAlertVisible} title='Delete expense?' message={expenseToDelete ? `Remove "${expenseToDelete.name}" permanently?` : "Remove this expense?"} variant='confirm' confirmText='Delete' cancelText='Cancel' onCancel={cancelDeleteExpense} onConfirm={confirmDeleteExpense} loading={deleting} />
+				<ThemedAlert visible={deleteAlertVisible} title='Delete transaction?' message={expenseToDelete ? `Remove "${expenseToDelete.name}" permanently?` : "Remove this transaction?"} variant='confirm' confirmText='Delete' cancelText='Cancel' onCancel={cancelDeleteExpense} onConfirm={confirmDeleteExpense} loading={deleting} />
 
 				{/* Bottom Sheet Modal */}
 				<AddExpenseBottomSheet ref={addExpenseModalRef} onClose={() => fetchExpenses()} onExpenseSuccess={() => addExpenseModalRef.current?.dismiss()} />
@@ -275,12 +299,25 @@ const styles = StyleSheet.create({
 		minHeight: 180,
 		justifyContent: "center",
 	},
+	totalRow: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+		marginBottom: 12,
+	},
+	totalColLeft: {
+		flex: 1,
+	},
+	totalColRight: {
+		flex: 1,
+		alignItems: "flex-end",
+	},
 	totalLabel: {
 		fontSize: 16,
 		color: "#FFFFFF",
 		marginBottom: 8,
 	},
-	totalAmount: {
+	totalSpent: {
 		fontSize: 24,
 		color: "#FFFFFF",
 		marginBottom: 24,

@@ -5,6 +5,7 @@ export interface SaveExpenseParams {
 	title: string;
 	amount: string;
 	category: string;
+	type: string;
 	date: Date;
 	notes?: string;
 	receiptAsset?: ImagePickerAsset | null;
@@ -13,6 +14,26 @@ export interface SaveExpenseParams {
 export interface SaveExpenseResult {
 	success: boolean;
 	message: string;
+	error?: string;
+}
+
+export interface TransactionRecord {
+	id: string;
+	title: string;
+	amount: number;
+	category: string;
+	type: string;
+	transaction_date: string;
+	notes?: string | null;
+	receipt_url?: string | null;
+	vendor?: string | null;
+	ocr_confidence?: number | null;
+	created_at?: string;
+}
+
+export interface FetchTransactionsResult {
+	success: boolean;
+	data: TransactionRecord[];
 	error?: string;
 }
 
@@ -98,7 +119,7 @@ export async function saveExpense(params: SaveExpenseParams): Promise<SaveExpens
 				title: params.title,
 				amount: parsedAmount,
 				category: params.category,
-				type: "expense",
+				type: params.type,
 				transaction_date: params.date.toISOString(),
 				notes: params.notes || null,
 				receipt_url: receiptUrl,
@@ -125,6 +146,46 @@ export async function saveExpense(params: SaveExpenseParams): Promise<SaveExpens
 		return {
 			success: false,
 			message: "An error occurred",
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
+}
+
+/**
+ * Fetches all transactions for the current user
+ */
+export async function fetchTransactions(): Promise<FetchTransactionsResult> {
+	try {
+		const { data: authData } = await supabase.auth.getUser();
+		if (!authData?.user?.id) {
+			return {
+				success: false,
+				data: [],
+				error: "Please log in to view transactions",
+			};
+		}
+
+		const userId = authData.user.id;
+		const { data, error } = await supabase.from("transactions").select("*").eq("user_id", userId).order("transaction_date", { ascending: false });
+
+		if (error) {
+			console.error("Fetch transactions error:", error);
+			return {
+				success: false,
+				data: [],
+				error: error.message,
+			};
+		}
+
+		return {
+			success: true,
+			data: data ?? [],
+		};
+	} catch (error) {
+		console.error("Fetch transactions unexpected error:", error);
+		return {
+			success: false,
+			data: [],
 			error: error instanceof Error ? error.message : "Unknown error",
 		};
 	}

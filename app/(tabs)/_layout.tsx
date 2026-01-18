@@ -45,9 +45,9 @@ export default function TabLayout() {
 				}}
 			/>
 			<Tabs.Screen
-				name='expense'
+				name='transactions'
 				options={{
-					title: "Expense",
+					title: "Transactions",
 					tabBarIcon: ({ color, focused }) => (
 						<View style={[styles.iconContainer, focused && styles.iconContainerActive]}>
 							<FontAwesome name='money' size={24} color={focused ? "#FFFFFF" : color} />

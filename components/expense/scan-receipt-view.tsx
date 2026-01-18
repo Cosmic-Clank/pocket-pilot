@@ -13,6 +13,7 @@ interface ScannedData {
 	title: string;
 	amount: string;
 	category: string;
+	type: string;
 	date: Date;
 	notes: string;
 	receiptBase64: string;
@@ -34,7 +35,6 @@ export const ScanReceiptView = ({ onExpenseSuccess }: ScanReceiptViewProps) => {
 		const result = await ImagePicker.launchImageLibraryAsync({
 			mediaTypes: ["images"],
 			allowsEditing: true,
-			quality: 1,
 			base64: true,
 		});
 
@@ -85,6 +85,7 @@ export const ScanReceiptView = ({ onExpenseSuccess }: ScanReceiptViewProps) => {
 				title: data.title,
 				amount: data.amount.toString(),
 				category: data.category,
+				type: data.type,
 				date: new Date(data.transaction_date),
 				notes: data.notes || "",
 				receiptBase64: capturedImage,
@@ -130,6 +131,7 @@ export const ScanReceiptView = ({ onExpenseSuccess }: ScanReceiptViewProps) => {
 					initialTitle={scannedData.title}
 					initialAmount={scannedData.amount}
 					initialCategory={scannedData.category}
+					initialType={scannedData.type}
 					initialDate={scannedData.date}
 					initialNotes={scannedData.notes}
 					initialReceiptAsset={receiptAsset}

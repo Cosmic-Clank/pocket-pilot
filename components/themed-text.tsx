@@ -17,12 +17,13 @@ export function ThemedText({ style, lightColor, darkColor, type = "default", ...
 const styles = StyleSheet.create({
 	default: {
 		fontSize: 16,
+		fontFamily: "Inter_500Medium",
 		lineHeight: 24,
 	},
 	defaultSemiBold: {
 		fontSize: 16,
 		lineHeight: 24,
-		fontWeight: "600",
+		fontFamily: "Inter_600SemiBold",
 	},
 	title: {
 		fontSize: 32,

@@ -34,8 +34,8 @@ export const AddExpenseBottomSheet = React.forwardRef<BottomSheetModal, AddExpen
 				{/* Header */}
 				<View style={styles.header}>
 					<View style={{ flex: 1 }}>
-						<ThemedText style={styles.title}>Add Expense</ThemedText>
-						<ThemedText style={styles.subtitle}>Add a new expense manually or scan a receipt</ThemedText>
+					<ThemedText style={styles.title}>Add Transaction</ThemedText>
+					<ThemedText style={styles.subtitle}>Add a new expense or income manually or scan a receipt</ThemedText>
 					</View>
 					<TouchableOpacity onPress={handleClosePress} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
 						<Feather name='x' size={24} color='#6B7280' />

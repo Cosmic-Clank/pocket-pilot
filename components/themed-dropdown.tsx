@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
 		marginBottom: 20,
 	},
 	label: {
-		fontSize: 16,
+		fontSize: 14,
 		fontWeight: "600",
 		color: "#000000",
 		marginBottom: 8,

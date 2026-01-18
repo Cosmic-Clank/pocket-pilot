@@ -17,13 +17,15 @@ interface ManualEntryFormProps {
 	initialDate?: Date | null;
 	initialNotes?: string;
 	initialReceiptAsset?: ImagePickerAsset | null;
+	initialType?: string;
 	onSuccess?: () => void;
 }
 
-export const ManualEntryForm = ({ initialTitle = "", initialAmount = "", initialCategory = "", initialDate = null, initialNotes = "", initialReceiptAsset = null, onSuccess }: ManualEntryFormProps) => {
+export const ManualEntryForm = ({ initialTitle = "", initialAmount = "", initialCategory = "", initialDate = null, initialNotes = "", initialReceiptAsset = null, initialType = "expense", onSuccess }: ManualEntryFormProps) => {
 	const [title, setTitle] = useState(initialTitle);
 	const [amount, setAmount] = useState(initialAmount);
 	const [category, setCategory] = useState(initialCategory);
+	const [type, setType] = useState(initialType);
 	const [date, setDate] = useState<Date | null>(initialDate);
 	const [notes, setNotes] = useState(initialNotes);
 	const [receiptAsset, setReceiptAsset] = useState<ImagePickerAsset | null>(initialReceiptAsset);
@@ -33,32 +35,19 @@ export const ManualEntryForm = ({ initialTitle = "", initialAmount = "", initial
 
 	const categoryOptions: SelectOption[] = [
 		{ label: "Transport", value: "transport" },
+		{ label: "Entertainment", value: "entertainment" },
+		{ label: "Groceries", value: "groceries" },
 		{ label: "Food", value: "food" },
 		{ label: "Shopping", value: "shopping" },
-		{ label: "Entertainment", value: "entertainment" },
-		{ label: "Utilities", value: "utilities" },
-		{ label: "Other", value: "other" },
-		{ label: "Healthcare", value: "healthcare" },
-		{ label: "Insurance", value: "insurance" },
-		{ label: "Rent", value: "rent" },
-		{ label: "Groceries", value: "groceries" },
-		{ label: "Dining Out", value: "dining" },
-		{ label: "Subscriptions", value: "subscriptions" },
+		{ label: "Bills", value: "bills" },
+		{ label: "Health", value: "health" },
 		{ label: "Education", value: "education" },
-		{ label: "Personal Care", value: "personal_care" },
-		{ label: "Fitness", value: "fitness" },
-		{ label: "Travel", value: "travel" },
-		{ label: "Electronics", value: "electronics" },
-		{ label: "Home & Garden", value: "home_garden" },
-		{ label: "Pets", value: "pets" },
-		{ label: "Gifts", value: "gifts" },
-		{ label: "Charity", value: "charity" },
-		{ label: "Childcare", value: "childcare" },
-		{ label: "Parking", value: "parking" },
-		{ label: "Fuel", value: "fuel" },
-		{ label: "Auto Maintenance", value: "auto_maintenance" },
-		{ label: "Work Expenses", value: "work_expenses" },
 		{ label: "Other", value: "other" },
+	];
+
+	const typeOptions: SelectOption[] = [
+		{ label: "Expense", value: "expense" },
+		{ label: "Income", value: "income" },
 	];
 
 	const handleSaveExpense = async () => {
@@ -81,6 +70,12 @@ export const ManualEntryForm = ({ initialTitle = "", initialAmount = "", initial
 			return;
 		}
 
+		if (!type) {
+			setAlertContent({ title: "Missing type", message: "Please select transaction type (Expense or Income)." });
+			setAlertVisible(true);
+			return;
+		}
+
 		if (!date) {
 			setAlertContent({ title: "Missing date", message: "Please select a transaction date." });
 			setAlertVisible(true);
@@ -92,6 +87,7 @@ export const ManualEntryForm = ({ initialTitle = "", initialAmount = "", initial
 			title,
 			amount,
 			category,
+			type,
 			date,
 			notes: notes.trim() || undefined,
 			receiptAsset: receiptAsset || undefined,
@@ -104,12 +100,13 @@ export const ManualEntryForm = ({ initialTitle = "", initialAmount = "", initial
 			setTitle("");
 			setAmount("");
 			setCategory("");
+			setType("expense");
 			setDate(null);
 			setNotes("");
 			setReceiptAsset(null);
 
-			setAlertContent({ title: "Success", message: "Expense saved successfully!" });
-			setAlertVisible(true);
+			// setAlertContent({ title: "Success", message: "Expense saved successfully!" });
+			// setAlertVisible(true);
 
 			if (onSuccess) {
 				onSuccess();
@@ -128,7 +125,12 @@ export const ManualEntryForm = ({ initialTitle = "", initialAmount = "", initial
 			{/* Title Field */}
 			<View style={styles.formGroup}>
 				<ThemedText style={styles.label}>Title</ThemedText>
-				<ThemedInput placeholder='Enter expense title' value={title} onChangeText={setTitle} />
+				<ThemedInput placeholder='Enter transaction title' value={title} onChangeText={setTitle} />
+			</View>
+
+			{/* Transaction Type Dropdown */}
+			<View style={styles.formGroup}>
+				<SelectDropdown label='Type' placeholder='Select type' options={typeOptions} selectedValue={type} onValueChange={(itemValue) => setType(itemValue)} />
 			</View>
 
 			{/* Amount Field */}
@@ -157,8 +159,7 @@ export const ManualEntryForm = ({ initialTitle = "", initialAmount = "", initial
 			<MediaPicker label='Attach Receipt (Optional)' value={receiptAsset?.fileName ?? receiptAsset?.uri} onSelect={(asset) => setReceiptAsset(asset)} />
 
 			{/* Save Button */}
-			<ThemedButton title='Save Expense' variant='primary' style={styles.saveButton} onPress={handleSaveExpense} loading={isSaving} disabled={isSaving} />
-
+			<ThemedButton title='Save Transaction' variant='primary' style={styles.saveButton} onPress={handleSaveExpense} loading={isSaving} disabled={isSaving} />
 			{/* Alert */}
 			<ThemedAlert visible={alertVisible} title={alertContent.title} message={alertContent.message} onDismiss={() => setAlertVisible(false)} />
 		</View>
