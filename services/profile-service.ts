@@ -4,6 +4,7 @@ export interface ProfileRecord {
 	id: string;
 	user_id: string;
 	emergency_fund_auto_invest: number | null;
+	emergency_fund_amount: number;
 	created_at?: string;
 }
 
@@ -98,6 +99,55 @@ export async function updateEmergencyFundAutoInvest(params: UpdateEmergencyFundA
 			success: false,
 			message: "An error occurred",
 			error: error.message || "Failed to update emergency fund",
+		};
+	}
+}
+
+export interface UpdateEmergencyFundAmountParams {
+	amount: number;
+}
+
+export interface UpdateEmergencyFundAmountResult {
+	success: boolean;
+	message: string;
+	error?: string;
+}
+
+/**
+ * Update the emergency fund amount (for deposit/withdraw operations)
+ */
+export async function updateEmergencyFundAmount(params: UpdateEmergencyFundAmountParams): Promise<UpdateEmergencyFundAmountResult> {
+	try {
+		// Get current user
+		const { data: authData, error: authError } = await supabase.auth.getUser();
+
+		if (authError || !authData?.user?.id) {
+			return {
+				success: false,
+				message: "Please log in to update emergency fund",
+			};
+		}
+
+		// Update profile emergency fund amount
+		const { error } = await supabase.from("profiles").update({ emergency_fund_amount: params.amount }).eq("id", authData.user.id);
+
+		if (error) {
+			return {
+				success: false,
+				message: "Failed to update emergency fund amount",
+				error: error.message,
+			};
+		}
+
+		return {
+			success: true,
+			message: "Emergency fund updated successfully",
+		};
+	} catch (error: any) {
+		return {
+			success: false,
+			message: "An error occurred",
+			error: error.message || "Failed to update emergency fund amount",
 		};
 	}
 }

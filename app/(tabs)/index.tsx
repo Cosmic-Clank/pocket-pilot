@@ -1,6 +1,8 @@
 import { StyleSheet, View, Pressable } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { useState, useEffect, useCallback } from "react";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedScrollView } from "@/components/themed-scroll-view";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,9 +11,74 @@ import { FinancialOverviewCard } from "@/components/home/financial-overview-card
 import { MonthlyBudgets } from "@/components/savings/monthly-budgets";
 import { CurrentSavingsCard } from "@/components/savings/current-savings-card";
 import { InsightsSection } from "@/components/home/insights-section";
+import { NotificationModal } from "@/components/home/notification-modal";
+import { BudgetAlertModal } from "@/components/home/budget-alert-modal";
+import { SavingsTipModal } from "@/components/home/savings-tip-modal";
+import { fetchTransactions, type TransactionRecord } from "@/services/transaction-service";
+import { fetchBudgets, type BudgetRecord } from "@/services/budget-service";
+import { computeBudgetUsage, computeSavingsProgress } from "@/utils/notification-utils";
+import { fetchAiSavingsTip, fetchInvestIdea, type AiSavingsTip, type InvestIdeaSuggestion } from "@/services/notification-service";
 
 export default function HomeScreen() {
+	const router = useRouter();
 	const insets = useSafeAreaInsets();
+	const [showNotifications, setShowNotifications] = useState(false);
+	const [showBudgetAlert, setShowBudgetAlert] = useState(false);
+	const [showSavingsTip, setShowSavingsTip] = useState(false);
+	const [notifLoading, setNotifLoading] = useState(true);
+	const [notifError, setNotifError] = useState<string | null>(null);
+	const [budgetUsage, setBudgetUsage] = useState<{ percent: number; spent: number; total: number } | null>(null);
+	const [savingsProgress, setSavingsProgress] = useState<{ percent: number; saved: number } | null>(null);
+	const [investIdea, setInvestIdea] = useState<InvestIdeaSuggestion | null>(null);
+	const [savingsTip, setSavingsTip] = useState<AiSavingsTip | null>(null);
+	const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
+	const [budgets, setBudgets] = useState<BudgetRecord[]>([]);
+
+	const SAVINGS_GOAL = 5000;
+
+	const loadNotifications = useCallback(async () => {
+		try {
+			setNotifLoading(true);
+			setNotifError(null);
+
+			const [txResult, budgetResult] = await Promise.all([fetchTransactions(), fetchBudgets()]);
+
+			if (!txResult.success) {
+				throw new Error(txResult.error || "Failed to load transactions");
+			}
+
+			const transactions = (txResult.data || []) as TransactionRecord[];
+			const budgets = (budgetResult.success ? budgetResult.data : []) as BudgetRecord[];
+
+			// Store for modals
+			setTransactions(transactions);
+			setBudgets(budgets);
+
+			const budgetStats = computeBudgetUsage(budgets, transactions);
+			setBudgetUsage({
+				percent: Math.round(budgetStats.percentUsed),
+				spent: budgetStats.spent,
+				total: budgetStats.totalBudget,
+			});
+
+			const savingsStats = computeSavingsProgress(transactions, budgets, SAVINGS_GOAL);
+			setSavingsProgress({ percent: Math.round(savingsStats.progressPercent), saved: savingsStats.currentSavings });
+
+			const [savingsTipResp, investIdeaResp] = await Promise.all([fetchAiSavingsTip(transactions, budgets, SAVINGS_GOAL), fetchInvestIdea()]);
+
+			setSavingsTip(savingsTipResp);
+			setInvestIdea(investIdeaResp);
+		} catch (err: any) {
+			console.error("Prefetch notifications error", err);
+			setNotifError(err?.message || "Failed to load notifications");
+		} finally {
+			setNotifLoading(false);
+		}
+	}, []);
+
+	useEffect(() => {
+		loadNotifications();
+	}, [loadNotifications]);
 
 	return (
 		<View style={styles.container}>
@@ -23,7 +90,7 @@ export default function HomeScreen() {
 							<ThemedText style={styles.welcomeText}>Welcome Back</ThemedText>
 							<ThemedText style={styles.subtitleText}>Here is your financial overview</ThemedText>
 						</View>
-						<Pressable style={styles.notificationButton}>
+						<Pressable style={styles.notificationButton} onPress={() => setShowNotifications(true)}>
 							<Feather name='bell' size={24} color='#FFFFFF' />
 							<View style={styles.notificationBadge}>
 								<ThemedText style={styles.badgeText}>3</ThemedText>
@@ -39,7 +106,7 @@ export default function HomeScreen() {
 				<View style={styles.section}>
 					<View style={styles.sectionHeader}>
 						<ThemedText style={styles.sectionTitle}>Monthly Spending</ThemedText>
-						<Pressable>
+						<Pressable onPress={() => router.navigate("/savings")}>
 							<ThemedText style={styles.viewAllText}>View All</ThemedText>
 						</Pressable>
 					</View>
@@ -52,7 +119,7 @@ export default function HomeScreen() {
 				<View style={styles.section}>
 					<View style={styles.sectionHeader}>
 						<ThemedText style={styles.sectionTitle}>Savings Progress</ThemedText>
-						<Pressable>
+						<Pressable onPress={() => router.navigate("/savings")}>
 							<ThemedText style={styles.viewAllText}>View All</ThemedText>
 						</Pressable>
 					</View>
@@ -62,9 +129,12 @@ export default function HomeScreen() {
 				</View>
 
 				{/* Insights Section */}
-				<InsightsSection />
+				<InsightsSection onBudgetAlertPress={() => setShowBudgetAlert(true)} onSavingsTipPress={() => setShowSavingsTip(true)} />
 			</ThemedScrollView>
-			<StatusBar style='auto' backgroundColor='transparent' />
+			<StatusBar style='light' backgroundColor='transparent' />
+			<NotificationModal visible={showNotifications} onClose={() => setShowNotifications(false)} loading={notifLoading} error={notifError} budgetUsage={budgetUsage} savingsProgress={savingsProgress} investIdea={investIdea} savingsTip={savingsTip} savingsGoal={5000} />
+			<BudgetAlertModal visible={showBudgetAlert} onClose={() => setShowBudgetAlert(false)} budgets={budgets} transactions={transactions} />
+			<SavingsTipModal visible={showSavingsTip} onClose={() => setShowSavingsTip(false)} loading={notifLoading} tip={savingsTip} />
 		</View>
 	);
 }

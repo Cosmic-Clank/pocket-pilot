@@ -12,6 +12,7 @@ import { useRef, useState, useCallback } from "react";
 import { StatusBar } from "expo-status-bar";
 import { supabase } from "@/utils/supabase";
 import { useFocusEffect } from "@react-navigation/native";
+import { fetchTransactions, calculateCurrentMonthBalance, type TransactionRecord } from "@/services/transaction-service";
 
 type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
 
@@ -47,6 +48,7 @@ export default function ExpenseScreen() {
 	const [loading, setLoading] = useState(true);
 	const [totalSpent, setTotalSpent] = useState(0);
 	const [totalIncome, setTotalIncome] = useState(0);
+	const [monthlyBalance, setMonthlyBalance] = useState(0);
 	const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
 	const [detailVisible, setDetailVisible] = useState(false);
 	const [deleteAlertVisible, setDeleteAlertVisible] = useState(false);
@@ -56,7 +58,7 @@ export default function ExpenseScreen() {
 	useFocusEffect(
 		useCallback(() => {
 			fetchExpenses();
-		}, [])
+		}, []),
 	);
 
 	const fetchExpenses = async () => {
@@ -88,27 +90,13 @@ export default function ExpenseScreen() {
 
 			setExpenses(formattedExpenses);
 
-			// Calculate totals for this month (expenses and income)
-			const now = new Date();
-			const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-			const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+			// Calculate current month totals using utility function
+			const transactions = (data || []) as TransactionRecord[];
+			const monthBalanceData = calculateCurrentMonthBalance(transactions);
 
-			const thisMonthTotal = formattedExpenses
-				.filter((exp) => {
-					const expDate = new Date(exp.transactionDate);
-					return expDate >= startOfMonth && expDate <= endOfMonth && exp.type === "expense";
-				})
-				.reduce((sum, exp) => sum + exp.amount, 0);
-
-			const thisMonthIncome = formattedExpenses
-				.filter((exp) => {
-					const expDate = new Date(exp.transactionDate);
-					return expDate >= startOfMonth && expDate <= endOfMonth && exp.type === "income";
-				})
-				.reduce((sum, exp) => sum + exp.amount, 0);
-
-			setTotalSpent(thisMonthTotal);
-			setTotalIncome(thisMonthIncome);
+			setTotalSpent(monthBalanceData.expenses);
+			setTotalIncome(monthBalanceData.income);
+			setMonthlyBalance(monthBalanceData.balance);
 		} catch (error) {
 			console.error("Failed to fetch expenses:", error);
 		} finally {
@@ -214,6 +202,13 @@ export default function ExpenseScreen() {
 								<ThemedText style={[styles.totalSpent, { color: "#BBF7D0" }]}>+${totalIncome.toFixed(2)}</ThemedText>
 							</View>
 						</View>
+						<View style={styles.balanceDivider} />
+						<View style={styles.balanceRow}>
+							<ThemedText style={styles.balanceLabel}>Monthly Balance</ThemedText>
+							<ThemedText style={[styles.balanceAmount, { color: monthlyBalance >= 0 ? "#BBF7D0" : "#FEE2E2" }]}>
+								{monthlyBalance >= 0 ? "+" : ""} ${monthlyBalance.toFixed(2)}
+							</ThemedText>
+						</View>
 						<ThemedText style={styles.totalPeriod}>This Month</ThemedText>
 					</LinearGradient>
 
@@ -267,7 +262,6 @@ export default function ExpenseScreen() {
 				{/* Bottom Sheet Modal */}
 				<AddExpenseBottomSheet ref={addExpenseModalRef} onClose={() => fetchExpenses()} onExpenseSuccess={() => addExpenseModalRef.current?.dismiss()} />
 			</BottomSheetModalProvider>
-			<StatusBar style='dark' backgroundColor='transparent' />
 		</GestureHandlerRootView>
 	);
 }
@@ -279,7 +273,9 @@ const styles = StyleSheet.create({
 	container: {
 		flex: 1,
 		backgroundColor: "#FFFFFF",
-		padding: 30,
+		paddingTop: 30,
+		paddingLeft: 30,
+		paddingRight: 30,
 	},
 	flatListContainer: {
 		flex: 1,
@@ -318,12 +314,32 @@ const styles = StyleSheet.create({
 		marginBottom: 8,
 	},
 	totalSpent: {
-		fontSize: 24,
+		fontSize: 20,
 		color: "#FFFFFF",
-		marginBottom: 24,
+		marginBottom: 8,
 	},
 	totalPeriod: {
 		fontSize: 14,
+		color: "#FFFFFF",
+	},
+	balanceDivider: {
+		height: 1,
+		backgroundColor: "rgba(255, 255, 255, 0.2)",
+		marginVertical: 12,
+	},
+	balanceRow: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+		marginBottom: 8,
+	},
+	balanceLabel: {
+		fontSize: 14,
+		color: "#FFFFFF",
+	},
+	balanceAmount: {
+		fontSize: 20,
+		fontWeight: "700",
 		color: "#FFFFFF",
 	},
 	addButton: {

@@ -1,15 +1,17 @@
-import { StyleSheet, View, Text, Image } from "react-native";
-import { useRouter } from "expo-router";
-import { useState } from "react";
-import { ThemedText } from "@/components/themed-text";
-import { ThemedScrollView } from "@/components/themed-scroll-view";
+import { ThemedAlert } from "@/components/themed-alert";
 import { ThemedButton } from "@/components/themed-button";
 import { ThemedInput } from "@/components/themed-input";
 import { ThemedPasswordInput } from "@/components/themed-password-input";
-import { ThemedAlert } from "@/components/themed-alert";
+import { ThemedScrollView } from "@/components/themed-scroll-view";
+import { ThemedText } from "@/components/themed-text";
+import { supabase } from "@/utils/supabase";
+import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useState } from "react";
+import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Toast } from "toastify-react-native";
-import { supabase } from "@/utils/supabase";
+import GoogleAuth from "@/components/GoogleAuth";
 
 export default function WelcomeBackScreen() {
 	const insets = useSafeAreaInsets();
@@ -58,9 +60,7 @@ export default function WelcomeBackScreen() {
 
 			{/* Social Login Buttons */}
 			<View style={styles.socialButtons}>
-				<ThemedButton variant='outline' title='Continue with Google' icon={<Image source={require("@/assets/icons/google-logo.png")} style={styles.socialIcon} />} />
-
-				<ThemedButton variant='outline' title='Continue with Facebook' icon={<Image source={require("@/assets/icons/facebook-logo.png")} style={styles.socialIcon} />} />
+				<GoogleAuth variant='custom' />
 			</View>
 
 			{/* Divider */}
@@ -83,11 +83,12 @@ export default function WelcomeBackScreen() {
 
 			{/* Sign Up Link */}
 			<View style={styles.signupContainer}>
-				<Text style={styles.signupText}>Don't have an account? </Text>
+				<Text style={styles.signupText}>Don&apos;t have an account? </Text>
 				<ThemedButton title='Sign up' variant='text' style={styles.signupButton} onPress={() => router.replace("/create-account")} disabled={loading} />
 			</View>
 
 			<ThemedAlert visible={alert.visible} title={alert.title} message={alert.message} onDismiss={() => setAlert({ ...alert, visible: false })} />
+			<StatusBar style='light' backgroundColor='transparent' />
 		</ThemedScrollView>
 	);
 }
@@ -114,10 +115,6 @@ const styles = StyleSheet.create({
 	socialButtons: {
 		gap: 16,
 		marginBottom: 32,
-	},
-	socialIcon: {
-		width: 24,
-		height: 24,
 	},
 	dividerContainer: {
 		flexDirection: "row",

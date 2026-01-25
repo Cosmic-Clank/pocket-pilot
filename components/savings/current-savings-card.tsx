@@ -3,7 +3,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
 import { useState, useCallback } from "react";
-import { fetchTransactions, type TransactionRecord } from "@/services/transaction-service";
+import { fetchTransactions, calculateCurrentMonthBalanceAfterBudget, type TransactionRecord } from "@/services/transaction-service";
+import { fetchBudgets } from "@/services/budget-service";
 import { useFocusEffect } from "@react-navigation/native";
 
 export function CurrentSavingsCard() {
@@ -15,24 +16,16 @@ export function CurrentSavingsCard() {
 
 	const loadSavings = useCallback(async () => {
 		setLoading(true);
-		const result = await fetchTransactions();
+		const [txResult, budgetResult] = await Promise.all([fetchTransactions(), fetchBudgets()]);
 
-		if (result.success) {
-			// Calculate current month savings: SUM(income) - SUM(expense)
-			const now = new Date();
-			const currentMonth = now.getMonth();
-			const currentYear = now.getFullYear();
+		if (txResult.success) {
+			const transactions = (txResult.data || []) as TransactionRecord[];
+			const budgets = budgetResult.success ? budgetResult.data : [];
 
-			const thisMonthTransactions = result.data.filter((tx) => {
-				const txDate = new Date(tx.transaction_date);
-				return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
-			});
+			// Calculate current month savings after budget allocations
+			const savingsData = calculateCurrentMonthBalanceAfterBudget(transactions, budgets);
 
-			const income = thisMonthTransactions.filter((tx) => tx.type === "income").reduce((sum, tx) => sum + tx.amount, 0);
-
-			const expenses = thisMonthTransactions.filter((tx) => tx.type === "expense").reduce((sum, tx) => sum + tx.amount, 0);
-
-			setCurrentSavings(income - expenses);
+			setCurrentSavings(savingsData.balanceAfterBudget);
 		}
 
 		setLoading(false);
@@ -41,14 +34,14 @@ export function CurrentSavingsCard() {
 	useFocusEffect(
 		useCallback(() => {
 			loadSavings();
-		}, [loadSavings])
+		}, [loadSavings]),
 	);
 
 	return (
 		<LinearGradient colors={["#00C950", "#009966"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.savingsCard}>
 			<View style={styles.savingsContent}>
 				<View style={styles.savingsLeft}>
-					<ThemedText style={styles.savingsLabel}>Current Savings</ThemedText>
+					<ThemedText style={styles.savingsLabel}>Current Monthly Savings {"\n"} (After Budget)</ThemedText>
 					<ThemedText type='defaultSemiBold' style={styles.savingsAmount}>
 						{loading ? "..." : `$${currentSavings.toFixed(2)}`}
 					</ThemedText>

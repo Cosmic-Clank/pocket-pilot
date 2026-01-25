@@ -190,3 +190,104 @@ export async function fetchTransactions(): Promise<FetchTransactionsResult> {
 		};
 	}
 }
+
+export interface BalanceDataAfterBudget {
+	balanceAfterBudget: number;
+	totalIncome: number;
+	totalExpense: number;
+	totalBudgets: number;
+}
+
+/**
+ * Calculate total balance across all time AFTER accounting for budget allocations
+ * Returns balance after budgets (income - expenses - budgets), total income, total expenses, and total budgets
+ */
+export function calculateTotalBalanceAfterBudget(transactions: TransactionRecord[], budgets: Array<{ amount: number }>): BalanceDataAfterBudget {
+	const income = transactions.filter((t) => t.type.toLowerCase() === "income").reduce((sum, t) => sum + (t.amount || 0), 0);
+
+	const expenses = transactions.filter((t) => t.type.toLowerCase() === "expense").reduce((sum, t) => sum + (t.amount || 0), 0);
+
+	const totalBudgets = budgets.reduce((sum, b) => sum + (b.amount || 0), 0);
+
+	return {
+		balanceAfterBudget: income - expenses - totalBudgets,
+		totalIncome: income,
+		totalExpense: expenses,
+		totalBudgets,
+	};
+}
+
+/**
+ * Calculate current month balance AFTER accounting for budget allocations
+ * Returns balance after budgets (income - expenses - budgets), total income, total expenses, and total budgets for current month
+ */
+export function calculateCurrentMonthBalanceAfterBudget(transactions: TransactionRecord[], budgets: Array<{ amount: number }>): BalanceDataAfterBudget {
+	const now = new Date();
+	const currentMonth = now.getMonth();
+	const currentYear = now.getFullYear();
+
+	const currentMonthTransactions = transactions.filter((tx) => {
+		const txDate = new Date(tx.transaction_date);
+		return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
+	});
+
+	const income = currentMonthTransactions.filter((t) => t.type.toLowerCase() === "income").reduce((sum, t) => sum + (t.amount || 0), 0);
+
+	const expenses = currentMonthTransactions.filter((t) => t.type.toLowerCase() === "expense").reduce((sum, t) => sum + (t.amount || 0), 0);
+
+	const totalBudgets = budgets.reduce((sum, b) => sum + (b.amount || 0), 0);
+
+	return {
+		balanceAfterBudget: income - expenses - totalBudgets,
+		totalIncome: income,
+		totalExpense: expenses,
+		totalBudgets,
+	};
+}
+
+export interface BalanceData {
+	balance: number;
+	income: number;
+	expenses: number;
+}
+
+/**
+ * Calculate total balance across all time
+ * Returns balance (income - expenses), total income, and total expenses
+ */
+export function calculateTotalBalance(transactions: TransactionRecord[]): BalanceData {
+	const income = transactions.filter((t) => t.type.toLowerCase() === "income").reduce((sum, t) => sum + (t.amount || 0), 0);
+
+	const expenses = transactions.filter((t) => t.type.toLowerCase() === "expense").reduce((sum, t) => sum + (t.amount || 0), 0);
+
+	return {
+		balance: income - expenses,
+		income,
+		expenses,
+	};
+}
+
+/**
+ * Calculate current month balance
+ * Returns balance (income - expenses), total income, and total expenses for current month
+ */
+export function calculateCurrentMonthBalance(transactions: TransactionRecord[]): BalanceData {
+	const now = new Date();
+	const currentMonth = now.getMonth();
+	const currentYear = now.getFullYear();
+
+	const currentMonthTransactions = transactions.filter((tx) => {
+		const txDate = new Date(tx.transaction_date);
+		return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
+	});
+
+	const income = currentMonthTransactions.filter((t) => t.type.toLowerCase() === "income").reduce((sum, t) => sum + (t.amount || 0), 0);
+
+	const expenses = currentMonthTransactions.filter((t) => t.type.toLowerCase() === "expense").reduce((sum, t) => sum + (t.amount || 0), 0);
+
+	return {
+		balance: income - expenses,
+		income,
+		expenses,
+	};
+}

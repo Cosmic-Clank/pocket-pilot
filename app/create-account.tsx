@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { StyleSheet, View, Text, Image, TouchableOpacity } from "react-native";
+import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,6 +11,7 @@ import { ThemedPasswordInput } from "@/components/themed-password-input";
 import { ThemedAlert } from "@/components/themed-alert";
 import { supabase } from "@/utils/supabase";
 import { Toast } from "toastify-react-native";
+import GoogleAuth from "@/components/GoogleAuth";
 
 export default function CreateAccountScreen() {
 	const insets = useSafeAreaInsets();
@@ -33,7 +34,7 @@ export default function CreateAccountScreen() {
 
 		try {
 			setLoading(true);
-			const { error, data } = await supabase.auth.signUp({
+			const { error } = await supabase.auth.signUp({
 				email: email.trim(),
 				password,
 				options: {
@@ -68,10 +69,8 @@ export default function CreateAccountScreen() {
 			</View>
 
 			<View style={styles.socialButtons}>
-				<ThemedButton variant='outline' title='Continue with Google' icon={<Image source={require("@/assets/icons/google-logo.png")} style={styles.socialIcon} />} />
-				<ThemedButton variant='outline' title='Continue with Facebook' icon={<Image source={require("@/assets/icons/facebook-logo.png")} style={styles.socialIcon} />} />
+				<GoogleAuth variant='custom' />{" "}
 			</View>
-
 			<View style={styles.dividerContainer}>
 				<View style={styles.dividerLine} />
 				<Text style={styles.dividerText}>Or continue with email</Text>
@@ -128,10 +127,6 @@ const styles = StyleSheet.create({
 	socialButtons: {
 		gap: 16,
 		marginBottom: 28,
-	},
-	socialIcon: {
-		width: 24,
-		height: 24,
 	},
 	dividerContainer: {
 		flexDirection: "row",

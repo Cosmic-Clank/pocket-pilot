@@ -2,7 +2,7 @@ import { View, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
 import { useState, useCallback } from "react";
-import { fetchTransactions } from "@/services/transaction-service";
+import { fetchTransactions, calculateTotalBalance, type TransactionRecord } from "@/services/transaction-service";
 import { useFocusEffect } from "@react-navigation/native";
 
 export function FinancialOverviewCard() {
@@ -16,22 +16,14 @@ export function FinancialOverviewCard() {
 		const result = await fetchTransactions();
 
 		if (result.success) {
-			const now = new Date();
-			const currentMonth = now.getMonth();
-			const currentYear = now.getFullYear();
+			const transactions = result.data as TransactionRecord[];
 
-			const thisMonthTransactions = result.data.filter((tx) => {
-				const txDate = new Date(tx.transaction_date);
-				return txDate.getMonth() === currentMonth && txDate.getFullYear() === currentYear;
-			});
+			// Calculate total balance across all time
+			const balanceData = calculateTotalBalance(transactions);
 
-			const monthIncome = thisMonthTransactions.filter((tx) => tx.type === "income").reduce((sum, tx) => sum + tx.amount, 0);
-
-			const monthExpenses = thisMonthTransactions.filter((tx) => tx.type === "expense").reduce((sum, tx) => sum + tx.amount, 0);
-
-			setIncome(monthIncome);
-			setExpenses(monthExpenses);
-			setTotalBalance(monthIncome - monthExpenses);
+			setIncome(balanceData.income);
+			setExpenses(balanceData.expenses);
+			setTotalBalance(balanceData.balance);
 		}
 
 		setLoading(false);
@@ -40,7 +32,7 @@ export function FinancialOverviewCard() {
 	useFocusEffect(
 		useCallback(() => {
 			loadFinancialData();
-		}, [loadFinancialData])
+		}, [loadFinancialData]),
 	);
 
 	return (

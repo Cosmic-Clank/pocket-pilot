@@ -156,10 +156,10 @@ export default function RootLayout() {
 				<Stack.Protected guard={isLoggedIn}>
 					<Stack.Screen name='(tabs)' options={{ headerShown: false }} />
 					<Stack.Screen name='modal' options={{ presentation: "modal", title: "Modal" }} />
+					<Stack.Screen name='weekly-report' />
 				</Stack.Protected>
 			</Stack>
 
-			<StatusBar style='dark' backgroundColor='#fff' />
 			<ToastManager config={toastConfig} />
 		</ThemeProvider>
 	);

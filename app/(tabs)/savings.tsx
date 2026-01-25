@@ -15,14 +15,19 @@ import { AddEmergencyFundBottomSheet } from "@/components/emergency-fund/add-eme
 import { fetchProfile, updateEmergencyFundAutoInvest, type ProfileRecord } from "@/services/profile-service";
 import { CurrentSavingsCard } from "@/components/savings/current-savings-card";
 import { MonthlyBudgets } from "@/components/savings/monthly-budgets";
+import { EmergencyFundBalanceCard } from "@/components/emergency-fund/emergency-fund-balance-card";
+import { EmergencyFundTransactionBottomSheet } from "@/components/emergency-fund/emergency-fund-transaction-bottom-sheet";
+import { TopPicksSection } from "@/components/ai-record/top-picks";
 
 export default function SavingsScreen() {
 	const insets = useSafeAreaInsets();
 	const [autoInvest, setAutoInvest] = useState(false);
 	const [profile, setProfile] = useState<ProfileRecord | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [transactionType, setTransactionType] = useState<"deposit" | "withdraw">("deposit");
 	const addBudgetModalRef = useRef<BottomSheetModal>(null);
 	const emergencyFundModalRef = useRef<BottomSheetModal>(null);
+	const emergencyFundTransactionModalRef = useRef<BottomSheetModal>(null);
 
 	const loadData = useCallback(async () => {
 		setLoading(true);
@@ -52,10 +57,20 @@ export default function SavingsScreen() {
 		}
 	};
 
+	const handleDeposit = () => {
+		setTransactionType("deposit");
+		emergencyFundTransactionModalRef.current?.present();
+	};
+
+	const handleWithdraw = () => {
+		setTransactionType("withdraw");
+		emergencyFundTransactionModalRef.current?.present();
+	};
+
 	useFocusEffect(
 		useCallback(() => {
 			loadData();
-		}, [loadData])
+		}, [loadData]),
 	);
 
 	return (
@@ -77,6 +92,8 @@ export default function SavingsScreen() {
 
 					{/* Current Savings Card */}
 					<CurrentSavingsCard />
+					{/* Emergency Fund Balance Card */}
+					<EmergencyFundBalanceCard balance={profile?.emergency_fund_amount || 0} onDeposit={handleDeposit} onWithdraw={handleWithdraw} />
 					{/* Auto-Invest Section */}
 					<View style={styles.autoInvestContainer}>
 						<View style={styles.autoInvestSubContainer}>
@@ -107,112 +124,20 @@ export default function SavingsScreen() {
 						</View>
 					</View>
 
-					{/* Educational Investment Options */}
-					<View style={styles.investmentHeader}>
-						<Feather name='book-open' size={24} color='#9810FA' />
-						<ThemedText style={styles.investmentTitle}>Educational Investment Options</ThemedText>
-					</View>
-
-					{/* Educational Purpose Only Card */}
-					<View style={styles.educationCard}>
-						<View style={styles.tipIcon}>
-							<Ionicons name='sparkles-outline' size={24} color='#7C3AED' />
-						</View>
-						<View style={styles.tipContent}>
-							<ThemedText style={styles.investmentCardTitle}>Educational Purpose Only</ThemedText>
-							<ThemedText style={styles.investmentCardDesc}>These recommendations are for educational purposes based on your income ($5,200/month) and savings. Always consult a financial advisor before investing.</ThemedText>
-						</View>
-					</View>
-
-					{/* Vanguard S&P 500 ETF Card */}
-					<View style={styles.investmentCard}>
-						<View style={styles.investmentHeaderRow}>
-							<LinearGradient colors={["#AD46FF", "#4F39F6"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.investmentCardIcon}>
-								<Feather name='trending-up' size={24} color='#FFFFFF' />
-							</LinearGradient>
-							<View style={styles.investmentTextCol}>
-								<ThemedText style={styles.investmentCardTitle}>Vanguard S&P 500 ETF (VOO)</ThemedText>
-								<ThemedText style={styles.investmentCardDesc}>Tracks the S&P 500 index with low expense ratio</ThemedText>
-								<View style={styles.tags}>
-									<View style={styles.tag}>
-										<ThemedText style={styles.tagText}>Index Fund</ThemedText>
-									</View>
-									<View style={[styles.tag, { backgroundColor: "#FEFCE8" }]}>
-										<ThemedText style={[styles.tagText, { color: "#A65F00" }]}>Low to Medium Risk</ThemedText>
-									</View>
-								</View>
-							</View>
-						</View>
-
-						<View style={styles.details}>
-							<View style={[styles.detailItem, styles.detailBox]}>
-								<ThemedText style={styles.detailLabel}>Expected Return</ThemedText>
-								<ThemedText style={styles.detailValue}>8-10% annually</ThemedText>
-							</View>
-							<View style={[styles.detailItem, styles.detailBox]}>
-								<ThemedText style={styles.detailLabel}>Min. Investment</ThemedText>
-								<ThemedText style={styles.detailValue}>$50</ThemedText>
-							</View>
-						</View>
-
-						<View style={styles.whyBox}>
-							<ThemedText style={styles.whyTitle}>Why this option?</ThemedText>
-							<ThemedText style={styles.whyText}>Based on your monthly surplus of $3,410 and moderate risk tolerance</ThemedText>
-						</View>
-					</View>
-
-					{/* Total Bond Market Index Fund Card */}
-					<View style={styles.investmentCard}>
-						<View style={styles.investmentHeaderRow}>
-							<LinearGradient colors={["#AD46FF", "#4F39F6"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.investmentCardIcon}>
-								<Feather name='trending-up' size={24} color='#FFFFFF' />
-							</LinearGradient>
-							<View style={styles.investmentTextCol}>
-								<ThemedText style={styles.investmentCardTitle}>Total Bond Market Index Fund</ThemedText>
-								<ThemedText style={styles.investmentCardDesc}>Diversified portfolio of U.S. investment-grade bonds</ThemedText>
-								<View style={styles.tags}>
-									<View style={styles.tag}>
-										<ThemedText style={styles.tagText}>Bond ETF</ThemedText>
-									</View>
-									<View style={[styles.tag, { backgroundColor: "#F0FDF4" }]}>
-										<ThemedText style={[styles.tagText, { color: "#008236" }]}>Low Risk</ThemedText>
-									</View>
-								</View>
-							</View>
-						</View>
-
-						<View style={styles.details}>
-							<View style={styles.detailItem}>
-								<ThemedText style={styles.detailLabel}>Expected Return</ThemedText>
-								<ThemedText style={styles.detailValue}>3-5% annually</ThemedText>
-							</View>
-							<View style={styles.detailItem}>
-								<ThemedText style={styles.detailLabel}>Min. Investment</ThemedText>
-								<ThemedText style={styles.detailValue}>$100</ThemedText>
-							</View>
-						</View>
-
-						<View style={styles.whyBox}>
-							<ThemedText style={styles.whyTitle}>Why this option?</ThemedText>
-							<ThemedText style={styles.whyText}>Provides stable returns and reduces overall portfolio risk</ThemedText>
-						</View>
-					</View>
-
 					{/* Monthly Budget Section */}
 					<MonthlyBudgets onAddBudgetPress={() => addBudgetModalRef.current?.present()} />
-					<View style={{ height: 50 }} />
 
-					<StatusBar style='dark' backgroundColor='#fff' />
+					{/* Top Picks */}
+					<View style={{ marginHorizontal: -30 }}>
+						<TopPicksSection />
+					</View>
+					<View style={{ height: 50 }} />
 
 					{/* Add Budget Bottom Sheet Modal */}
 					<AddBudgetBottomSheet
 						ref={addBudgetModalRef}
 						onClose={() => {
 							// Refresh budget list when modal closes
-							loadData();
-						}}
-						onBudgetSuccess={() => {
-							// Refresh data and close modal
 							loadData();
 							addBudgetModalRef.current?.dismiss();
 						}}
@@ -231,9 +156,23 @@ export default function SavingsScreen() {
 							emergencyFundModalRef.current?.dismiss();
 						}}
 					/>
+
+					{/* Emergency Fund Transaction Bottom Sheet */}
+					<EmergencyFundTransactionBottomSheet
+						ref={emergencyFundTransactionModalRef}
+						type={transactionType}
+						currentBalance={profile?.emergency_fund_amount || 0}
+						onClose={() => {
+							loadData();
+						}}
+						onSuccess={() => {
+							loadData();
+							emergencyFundTransactionModalRef.current?.dismiss();
+						}}
+					/>
 				</ThemedScrollView>
+				<StatusBar style='dark' backgroundColor='#fff' />
 			</BottomSheetModalProvider>
-			<StatusBar style='dark' backgroundColor='#fff' />
 		</GestureHandlerRootView>
 	);
 }

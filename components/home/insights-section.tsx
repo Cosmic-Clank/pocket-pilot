@@ -1,13 +1,21 @@
 import { View, StyleSheet, Pressable } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 import { ThemedText } from "@/components/themed-text";
 
-export function InsightsSection() {
+interface InsightsSectionProps {
+	onBudgetAlertPress?: () => void;
+	onSavingsTipPress?: () => void;
+}
+
+export function InsightsSection({ onBudgetAlertPress, onSavingsTipPress }: InsightsSectionProps) {
+	const router = useRouter();
+
 	return (
 		<View style={styles.container}>
 			<ThemedText style={styles.sectionTitle}>Insights</ThemedText>
 
-			<Pressable style={styles.insightCard}>
+			<Pressable style={styles.insightCard} onPress={() => router.push("/weekly-report")}>
 				<View style={styles.insightContent}>
 					<ThemedText style={styles.insightTitle}>Weekly Report</ThemedText>
 					<ThemedText style={styles.insightSubtitle}>Check your spending analysis</ThemedText>
@@ -15,18 +23,18 @@ export function InsightsSection() {
 				<Feather name='chevron-right' size={20} color='#9CA3AF' />
 			</Pressable>
 
-			<Pressable style={styles.insightCard}>
+			<Pressable style={styles.insightCard} onPress={onBudgetAlertPress}>
 				<View style={styles.insightContent}>
 					<ThemedText style={styles.insightTitle}>Budget Alert</ThemedText>
-					<ThemedText style={styles.insightSubtitle}>You're 85% through your food budget</ThemedText>
+					<ThemedText style={styles.insightSubtitle}>Track your budget status</ThemedText>
 				</View>
 				<Feather name='chevron-right' size={20} color='#9CA3AF' />
 			</Pressable>
 
-			<Pressable style={styles.insightCard}>
+			<Pressable style={styles.insightCard} onPress={onSavingsTipPress}>
 				<View style={styles.insightContent}>
 					<ThemedText style={styles.insightTitle}>Savings Tip</ThemedText>
-					<ThemedText style={styles.insightSubtitle}>Save $200 more this month</ThemedText>
+					<ThemedText style={styles.insightSubtitle}>Get AI-powered money advice</ThemedText>
 				</View>
 				<Feather name='chevron-right' size={20} color='#9CA3AF' />
 			</Pressable>
