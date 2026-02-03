@@ -6,8 +6,8 @@ import { useState, useEffect, useCallback } from "react";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedScrollView } from "@/components/themed-scroll-view";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { StatusBar } from "expo-status-bar";
 import { FinancialOverviewCard } from "@/components/home/financial-overview-card";
+import { SalaryDayCard } from "@/components/home/salary-day-card";
 import { MonthlyBudgets } from "@/components/savings/monthly-budgets";
 import { CurrentSavingsCard } from "@/components/savings/current-savings-card";
 import { InsightsSection } from "@/components/home/insights-section";
@@ -16,6 +16,7 @@ import { BudgetAlertModal } from "@/components/home/budget-alert-modal";
 import { SavingsTipModal } from "@/components/home/savings-tip-modal";
 import { fetchTransactions, type TransactionRecord } from "@/services/transaction-service";
 import { fetchBudgets, type BudgetRecord } from "@/services/budget-service";
+import { fetchProfile } from "@/services/profile-service";
 import { computeBudgetUsage, computeSavingsProgress } from "@/utils/notification-utils";
 import { fetchAiSavingsTip, fetchInvestIdea, type AiSavingsTip, type InvestIdeaSuggestion } from "@/services/notification-service";
 
@@ -33,15 +34,15 @@ export default function HomeScreen() {
 	const [savingsTip, setSavingsTip] = useState<AiSavingsTip | null>(null);
 	const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
 	const [budgets, setBudgets] = useState<BudgetRecord[]>([]);
-
-	const SAVINGS_GOAL = 5000;
+	const [refreshKey, setRefreshKey] = useState(0);
+	const [savingsGoal, setSavingsGoal] = useState<number | null>(null);
 
 	const loadNotifications = useCallback(async () => {
 		try {
 			setNotifLoading(true);
 			setNotifError(null);
 
-			const [txResult, budgetResult] = await Promise.all([fetchTransactions(), fetchBudgets()]);
+			const [txResult, budgetResult, profileResult] = await Promise.all([fetchTransactions(), fetchBudgets(), fetchProfile()]);
 
 			if (!txResult.success) {
 				throw new Error(txResult.error || "Failed to load transactions");
@@ -61,10 +62,14 @@ export default function HomeScreen() {
 				total: budgetStats.totalBudget,
 			});
 
-			const savingsStats = computeSavingsProgress(transactions, budgets, SAVINGS_GOAL);
+			// Set savings goal from profile
+			const goal = profileResult.success && profileResult.data?.monthly_saving_goal ? profileResult.data.monthly_saving_goal : 5000;
+			setSavingsGoal(goal);
+
+			const savingsStats = computeSavingsProgress(transactions, budgets, goal);
 			setSavingsProgress({ percent: Math.round(savingsStats.progressPercent), saved: savingsStats.currentSavings });
 
-			const [savingsTipResp, investIdeaResp] = await Promise.all([fetchAiSavingsTip(transactions, budgets, SAVINGS_GOAL), fetchInvestIdea()]);
+			const [savingsTipResp, investIdeaResp] = await Promise.all([fetchAiSavingsTip(transactions, budgets, goal), fetchInvestIdea()]);
 
 			setSavingsTip(savingsTipResp);
 			setInvestIdea(investIdeaResp);
@@ -78,7 +83,7 @@ export default function HomeScreen() {
 
 	useEffect(() => {
 		loadNotifications();
-	}, [loadNotifications]);
+	}, [loadNotifications, refreshKey]);
 
 	return (
 		<View style={styles.container}>
@@ -93,7 +98,7 @@ export default function HomeScreen() {
 						<Pressable style={styles.notificationButton} onPress={() => setShowNotifications(true)}>
 							<Feather name='bell' size={24} color='#FFFFFF' />
 							<View style={styles.notificationBadge}>
-								<ThemedText style={styles.badgeText}>3</ThemedText>
+								<ThemedText style={styles.badgeText}></ThemedText>
 							</View>
 						</Pressable>
 					</View>
@@ -101,6 +106,9 @@ export default function HomeScreen() {
 
 				{/* Financial Overview Card */}
 				<FinancialOverviewCard />
+
+				{/* Salary Day Card */}
+				<SalaryDayCard onSalaryAdded={() => setRefreshKey((prev) => prev + 1)} />
 
 				{/* Monthly Spending Section */}
 				<View style={styles.section}>
@@ -131,8 +139,7 @@ export default function HomeScreen() {
 				{/* Insights Section */}
 				<InsightsSection onBudgetAlertPress={() => setShowBudgetAlert(true)} onSavingsTipPress={() => setShowSavingsTip(true)} />
 			</ThemedScrollView>
-			<StatusBar style='light' backgroundColor='transparent' />
-			<NotificationModal visible={showNotifications} onClose={() => setShowNotifications(false)} loading={notifLoading} error={notifError} budgetUsage={budgetUsage} savingsProgress={savingsProgress} investIdea={investIdea} savingsTip={savingsTip} savingsGoal={5000} />
+			<NotificationModal visible={showNotifications} onClose={() => setShowNotifications(false)} loading={notifLoading} error={notifError} budgetUsage={budgetUsage} savingsProgress={savingsProgress} investIdea={investIdea} savingsTip={savingsTip} savingsGoal={savingsGoal || 5000} />
 			<BudgetAlertModal visible={showBudgetAlert} onClose={() => setShowBudgetAlert(false)} budgets={budgets} transactions={transactions} />
 			<SavingsTipModal visible={showSavingsTip} onClose={() => setShowSavingsTip(false)} loading={notifLoading} tip={savingsTip} />
 		</View>
@@ -172,12 +179,12 @@ const styles = StyleSheet.create({
 	},
 	notificationBadge: {
 		position: "absolute",
-		top: -4,
-		right: -4,
+		top: -2,
+		right: -2,
 		backgroundColor: "#EF4444",
 		borderRadius: 10,
-		width: 20,
-		height: 20,
+		width: 10,
+		height: 10,
 		alignItems: "center",
 		justifyContent: "center",
 	},

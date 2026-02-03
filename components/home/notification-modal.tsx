@@ -59,13 +59,11 @@ export function NotificationModal({ visible, onClose, loading, error, budgetUsag
 						</View>
 					) : (
 						<ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-							{budgetUsage ? renderCard("Spending Limit Alert", `You've reached ${budgetUsage.percent}% of your monthly budgets ($${budgetUsage.spent.toFixed(0)} of $${budgetUsage.total.toFixed(0)}).`, "Just now", "bell", budgetUsage.percent >= 85 ? "warning" : "primary") : null}
+							{budgetUsage ? renderCard("Spending Limit Alert", `You've reached ${budgetUsage.percent}% of your monthly budgets (AED ${budgetUsage.spent.toFixed(0)} of AED ${budgetUsage.total.toFixed(0)}).`, "Just now", "bell", budgetUsage.percent >= 85 ? "warning" : "primary") : null}
 
-							{savingsProgress ? renderCard("Savings Goal Progress", `You're at ${savingsProgress.percent}% of your $${savingsGoal.toLocaleString()} goal (saved $${savingsProgress.saved.toFixed(0)} this month).`, "Today", "dollar-sign", "success") : null}
+							{savingsProgress ? renderCard("Savings Goal Progress", `You're at ${savingsProgress.percent}% of your AED ${savingsGoal.toLocaleString()} goal (saved AED ${savingsProgress.saved.toFixed(0)} this month).`, "Today", "dollar-sign", "success") : null}
 
-							{investIdea ? renderCard("AI Stock Idea", `${investIdea.symbol} · ${investIdea.company}\n${investIdea.thesis}`, "Live", "trending-up", "primary") : null}
-
-							{savingsTip ? renderCard("AI Savings Tip", `${savingsTip.title}: ${savingsTip.suggestion}` + (savingsTip.action_items.length ? `\n• ${savingsTip.action_items.join("\n• ")}` : ""), savingsTip.estimated_monthly_savings ? `Est. save $${savingsTip.estimated_monthly_savings.toFixed(0)}/mo` : "Today", "target", "success") : null}
+							{savingsTip ? renderCard("AI Savings Tip", `${savingsTip.title}: ${savingsTip.suggestion}` + (savingsTip.action_items.length ? `\n• ${savingsTip.action_items.join("\n• ")}` : ""), savingsTip.estimated_monthly_savings ? `Est. save AED ${savingsTip.estimated_monthly_savings.toFixed(0)}/mo` : "Today", "target", "success") : null}
 						</ScrollView>
 					)}
 				</View>

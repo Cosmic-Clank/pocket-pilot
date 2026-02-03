@@ -5,9 +5,8 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedButton } from "@/components/themed-button";
 import { ThemedAlert } from "@/components/themed-alert";
 import { API_CONFIG, getApiUrl } from "@/constants/config";
-import { fetchTransactions } from "@/services/transaction-service";
+import { calculateCurrentMonthBalanceAfterBudget, fetchTransactions } from "@/services/transaction-service";
 import { fetchBudgets } from "@/services/budget-service";
-import { fetchProfile } from "@/services/profile-service";
 import { executeTrade } from "@/services/stock-trade-service";
 import { addToWatchlist, isInWatchlist } from "@/services/stock-watchlist-service";
 
@@ -47,19 +46,18 @@ export function TopPicksSection() {
 				setError(null);
 
 				// Pull the latest financial context from Supabase before requesting picks
-				const [txResult, budgetResult, profileResult] = await Promise.all([fetchTransactions(), fetchBudgets(), fetchProfile()]);
+				const [txResult, budgetResult] = await Promise.all([fetchTransactions(), fetchBudgets()]);
 
-				if (!txResult.success || !budgetResult.success || !profileResult.success) {
-					const firstError = txResult.error || budgetResult.error || profileResult.error || "Failed to load financial data";
+				if (!txResult.success || !budgetResult.success) {
+					const firstError = txResult.error || budgetResult.error || "Failed to load financial data";
 					throw new Error(firstError);
 				}
 
+				const monthlyBalance = calculateCurrentMonthBalanceAfterBudget(txResult.data, budgetResult.data);
+				console.log("Monthly balance after budget:", monthlyBalance);
+
 				const payload = {
-					transactions: txResult.data,
-					budgets: budgetResult.data,
-					emergencyFund: {
-						autoInvest: profileResult.data?.emergency_fund_auto_invest ?? 0,
-					},
+					monthly_balance_after_budget: monthlyBalance.balanceAfterBudget,
 				};
 
 				const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.TOP_PICKS), {

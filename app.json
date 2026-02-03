@@ -1,8 +1,8 @@
 {
 	"expo": {
-		"name": "pocket-pilot",
+		"name": "Pocket Pilot",
 		"slug": "pocket-pilot",
-		"version": "1.0.0",
+		"version": "1.0.4",
 		"orientation": "portrait",
 		"icon": "./assets/images/icon.png",
 		"scheme": "pocketpilot",
@@ -36,7 +36,7 @@
 					"resizeMode": "contain",
 					"backgroundColor": "#2B7FFF",
 					"dark": {
-						"backgroundColor": "#000000"
+						"backgroundColor": "#2B7FFF"
 					}
 				}
 			],

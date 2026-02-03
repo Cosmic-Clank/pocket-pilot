@@ -150,15 +150,17 @@ export default function RootLayout() {
 					<Stack.Screen name='welcome' />
 					<Stack.Screen name='create-account' />
 					<Stack.Screen name='forgot' />
-					<Stack.Screen name='reset' />
+					<Stack.Screen name='verify-reset-password' />
 					<Stack.Screen name='verify-email' />
 				</Stack.Protected>
 				<Stack.Protected guard={isLoggedIn}>
 					<Stack.Screen name='(tabs)' options={{ headerShown: false }} />
 					<Stack.Screen name='modal' options={{ presentation: "modal", title: "Modal" }} />
 					<Stack.Screen name='weekly-report' />
+					<Stack.Screen name='reset-password' />
 				</Stack.Protected>
 			</Stack>
+			<StatusBar style='dark' backgroundColor='transparent' />
 
 			<ToastManager config={toastConfig} />
 		</ThemeProvider>

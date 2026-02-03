@@ -49,6 +49,6 @@ export const supabase = createClient(supabaseUrl, supabasePublishableKey, {
 		storage: new LargeSecureStore(),
 		autoRefreshToken: true,
 		persistSession: true,
-		detectSessionInUrl: false,
+		detectSessionInUrl: false, // We handle this manually in _layout.tsx
 	},
 });

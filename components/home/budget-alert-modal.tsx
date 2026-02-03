@@ -129,7 +129,7 @@ export function BudgetAlertModal({ visible, onClose, budgets, transactions }: Bu
 											</View>
 											<View>
 												<ThemedText style={styles.budgetCategory}>{budget.category.charAt(0).toUpperCase() + budget.category.slice(1)}</ThemedText>
-												<ThemedText style={styles.budgetBudget}>${budget.budgetAmount.toFixed(0)} budget</ThemedText>
+												<ThemedText style={styles.budgetBudget}>AED {budget.budgetAmount.toFixed(0)} budget</ThemedText>
 											</View>
 										</View>
 										<View style={styles.budgetRight}>
@@ -142,11 +142,11 @@ export function BudgetAlertModal({ visible, onClose, budgets, transactions }: Bu
 									<View style={styles.budgetStats}>
 										<View style={styles.statRow}>
 											<ThemedText style={styles.statLabel}>Spent</ThemedText>
-											<ThemedText style={[styles.statValue, { color: getStatusColor(budget.status) }]}>${budget.spent.toFixed(0)}</ThemedText>
+											<ThemedText style={[styles.statValue, { color: getStatusColor(budget.status) }]}>AED {budget.spent.toFixed(0)}</ThemedText>
 										</View>
 										<View style={styles.statRow}>
 											<ThemedText style={styles.statLabel}>Remaining</ThemedText>
-											<ThemedText style={styles.statValue}>${Math.max(0, budget.remaining).toFixed(0)}</ThemedText>
+											<ThemedText style={styles.statValue}>AED {Math.max(0, budget.remaining).toFixed(0)}</ThemedText>
 										</View>
 									</View>
 
@@ -168,14 +168,14 @@ export function BudgetAlertModal({ visible, onClose, budgets, transactions }: Bu
 									{budget.status === "danger" && (
 										<View style={styles.alertBox}>
 											<Feather name='alert-circle' size={16} color='#EF4444' />
-											<ThemedText style={styles.alertText}>You've exceeded this budget by ${(budget.spent - budget.budgetAmount).toFixed(0)}</ThemedText>
+											<ThemedText style={styles.alertText}>You've exceeded this budget by AED {(budget.spent - budget.budgetAmount).toFixed(0)}</ThemedText>
 										</View>
 									)}
 
 									{budget.status === "warning" && (
 										<View style={[styles.alertBox, { backgroundColor: "#FEF3C7" }]}>
 											<Feather name='info' size={16} color='#F59E0B' />
-											<ThemedText style={[styles.alertText, { color: "#92400E" }]}>Only ${budget.remaining.toFixed(0)} left in this budget</ThemedText>
+											<ThemedText style={[styles.alertText, { color: "#92400E" }]}>Only AED {budget.remaining.toFixed(0)} left in this budget</ThemedText>
 										</View>
 									)}
 								</View>

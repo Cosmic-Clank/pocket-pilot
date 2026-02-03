@@ -57,23 +57,13 @@ export function AvailableToInvestCard() {
 		}, [loadFinancialData]),
 	);
 
-	if (loading) {
-		return (
-			<LinearGradient colors={["#10B981", "#059669"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
-				<View style={styles.loadingContainer}>
-					<ActivityIndicator size='small' color='#FFFFFF' />
-				</View>
-			</LinearGradient>
-		);
-	}
-
 	return (
 		<LinearGradient colors={["#10B981", "#059669"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.card}>
 			<View style={styles.content}>
 				<View style={styles.left}>
 					<ThemedText style={styles.label}>Available to Invest</ThemedText>
 					<ThemedText type='defaultSemiBold' style={styles.amount}>
-						${availableAmount.toFixed(0)}
+						AED {loading ? "..." : availableAmount.toFixed(0)}
 					</ThemedText>
 				</View>
 				<View style={styles.icon}>
@@ -83,11 +73,11 @@ export function AvailableToInvestCard() {
 			<View style={styles.statsContainer}>
 				<View style={styles.statItem}>
 					<ThemedText style={styles.statLabel}>Total Savings</ThemedText>
-					<ThemedText style={styles.statValue}>${totalSavings.toFixed(0)}</ThemedText>
+					<ThemedText style={styles.statValue}>AED {loading ? "..." : totalSavings.toFixed(0)}</ThemedText>
 				</View>
 				<View style={styles.statItem}>
 					<ThemedText style={styles.statLabel}>Already Invested</ThemedText>
-					<ThemedText style={styles.statValue}>${alreadyInvested.toFixed(2)}</ThemedText>
+					<ThemedText style={styles.statValue}>AED {loading ? "..." : alreadyInvested.toFixed(2)}</ThemedText>
 				</View>
 			</View>
 		</LinearGradient>

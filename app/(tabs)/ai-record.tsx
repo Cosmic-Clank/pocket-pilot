@@ -50,8 +50,6 @@ export default function AIRecordScreen() {
 				</View>
 
 				<View style={{ height: 30 }} />
-
-				<StatusBar style='light' backgroundColor='transparent' />
 			</ThemedScrollView>
 		</View>
 	);

@@ -3,6 +3,7 @@ import { supabase } from "@/utils/supabase";
 import { StyleSheet, TouchableOpacity, Text, Image, ActivityIndicator, type ViewStyle } from "react-native";
 import { useState } from "react";
 import * as Haptics from "expo-haptics";
+import { ThemedAlert } from "@/components/themed-alert";
 
 type GoogleAuthProps = {
 	variant?: "native" | "custom";
@@ -13,6 +14,9 @@ type GoogleAuthProps = {
 
 export default function GoogleAuth({ variant = "native", style, onSuccess, onError }: GoogleAuthProps) {
 	const [loading, setLoading] = useState(false);
+	const [alertVisible, setAlertVisible] = useState(false);
+	const [alertTitle, setAlertTitle] = useState("Message");
+	const [alertMessage, setAlertMessage] = useState("");
 
 	GoogleSignin.configure({
 		webClientId: "839702511871-q094sfunbe900ogttnd9imp4go0llpak.apps.googleusercontent.com",
@@ -34,13 +38,27 @@ export default function GoogleAuth({ variant = "native", style, onSuccess, onErr
 				console.log(response, data, error);
 				if (!error) {
 					onSuccess?.();
+					setAlertTitle("Signed in");
+					setAlertMessage("You're now signed in with Google.");
+					setAlertVisible(true);
 				} else {
 					onError?.(error);
+					setAlertTitle("Sign-in failed");
+					setAlertMessage(error.message || "Could not sign in with Google.");
+					setAlertVisible(true);
 				}
+			} else {
+				setAlertTitle("Sign-in cancelled");
+				setAlertMessage("Google sign-in was cancelled or incomplete.");
+				setAlertVisible(true);
 			}
 		} catch (error: any) {
 			console.log("Google sign in error:", error);
 			onError?.(error);
+			setAlertTitle("Sign-in error");
+			setAlertMessage(error?.message || "An unexpected error occurred while signing in.");
+			setAlertVisible(true);
+
 			if (error.code === statusCodes.IN_PROGRESS) {
 				// operation (e.g. sign in) is in progress already
 			} else if (error.code === statusCodes.PLAY_SERVICES_NOT_AVAILABLE) {
@@ -60,16 +78,20 @@ export default function GoogleAuth({ variant = "native", style, onSuccess, onErr
 
 	// Custom styled button (matches app theme)
 	return (
-		<TouchableOpacity style={[styles.customButton, style]} onPress={handleSignIn} disabled={loading} activeOpacity={0.2}>
-			{loading ? (
-				<ActivityIndicator size='small' color='#FFFFFF' />
-			) : (
-				<>
-					<Image source={require("@/assets/icons/google-logo.png")} style={styles.googleIcon} />
-					<Text style={styles.buttonText}>Continue with Google</Text>
-				</>
-			)}
-		</TouchableOpacity>
+		<>
+			<TouchableOpacity style={[styles.customButton, style]} onPress={handleSignIn} disabled={loading} activeOpacity={0.2}>
+				{loading ? (
+					<ActivityIndicator size='small' color='#000000' />
+				) : (
+					<>
+						<Image source={require("@/assets/icons/google-logo.png")} style={styles.googleIcon} />
+						<Text style={styles.buttonText}>Continue with Google</Text>
+					</>
+				)}
+			</TouchableOpacity>
+
+			<ThemedAlert visible={alertVisible} title={alertTitle} message={alertMessage} onDismiss={() => setAlertVisible(false)} />
+		</>
 	);
 }
 

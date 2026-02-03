@@ -25,7 +25,7 @@ const SAVE_MONEY_URL = getApiUrl(API_CONFIG.ENDPOINTS.AI_SAVE_MONEY);
 const INVEST_IDEA_URL = getApiUrl(API_CONFIG.ENDPOINTS.AI_INVEST_IDEA);
 
 export async function fetchAiSavingsTip(transactions: TransactionRecord[], budgets: BudgetRecord[], savingsGoal = 5000): Promise<AiSavingsTip> {
-	const recent = getRecentTransactionsForInsights(transactions, 8);
+	const recent = getRecentTransactionsForInsights(transactions, 20);
 
 	const payload = {
 		transactions: recent,

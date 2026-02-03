@@ -38,7 +38,7 @@ export function FinancialOverviewCard() {
 	return (
 		<View style={styles.card}>
 			<ThemedText style={styles.cardLabel}>Total Balance</ThemedText>
-			<ThemedText style={styles.balanceAmount}>{loading ? "..." : `$${totalBalance.toFixed(2)}`}</ThemedText>
+			<ThemedText style={styles.balanceAmount}>{loading ? "..." : `AED ${totalBalance.toFixed(2)}`}</ThemedText>
 
 			<View style={styles.statsRow}>
 				<View style={styles.statItem}>
@@ -46,7 +46,7 @@ export function FinancialOverviewCard() {
 						<Feather name='trending-up' size={16} color='#10B981' />
 						<ThemedText style={styles.statLabel}>Income</ThemedText>
 					</View>
-					<ThemedText style={styles.incomeAmount}>{loading ? "..." : `$${income.toFixed(2)}`}</ThemedText>
+					<ThemedText style={styles.incomeAmount}>{loading ? "..." : `AED ${income.toFixed(2)}`}</ThemedText>
 				</View>
 
 				<View style={styles.statItem}>
@@ -54,7 +54,7 @@ export function FinancialOverviewCard() {
 						<Feather name='trending-down' size={16} color='#EF4444' />
 						<ThemedText style={styles.statLabel}>Expenses</ThemedText>
 					</View>
-					<ThemedText style={styles.expenseAmount}>{loading ? "..." : `$${expenses.toFixed(2)}`}</ThemedText>
+					<ThemedText style={styles.expenseAmount}>{loading ? "..." : `AED ${expenses.toFixed(2)}`}</ThemedText>
 				</View>
 			</View>
 		</View>

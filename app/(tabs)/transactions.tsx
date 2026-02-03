@@ -9,10 +9,9 @@ import { ThemedAlert } from "@/components/themed-alert";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AddExpenseBottomSheet } from "@/components/expense/add-expense-bottom-sheet";
 import { useRef, useState, useCallback } from "react";
-import { StatusBar } from "expo-status-bar";
 import { supabase } from "@/utils/supabase";
 import { useFocusEffect } from "@react-navigation/native";
-import { fetchTransactions, calculateCurrentMonthBalance, type TransactionRecord } from "@/services/transaction-service";
+import { fetchTransactions, calculateCurrentMonthBalance, calculateTotalBalance, type TransactionRecord } from "@/services/transaction-service";
 
 type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
 
@@ -90,12 +89,14 @@ export default function ExpenseScreen() {
 
 			setExpenses(formattedExpenses);
 
-			// Calculate current month totals using utility function
+			// Calculate all-time totals using calculateTotalBalance
 			const transactions = (data || []) as TransactionRecord[];
-			const monthBalanceData = calculateCurrentMonthBalance(transactions);
+			const totalBalanceData = calculateTotalBalance(transactions);
+			setTotalSpent(totalBalanceData.expenses);
+			setTotalIncome(totalBalanceData.income);
 
-			setTotalSpent(monthBalanceData.expenses);
-			setTotalIncome(monthBalanceData.income);
+			// Calculate current month balance separately
+			const monthBalanceData = calculateCurrentMonthBalance(transactions);
 			setMonthlyBalance(monthBalanceData.balance);
 		} catch (error) {
 			console.error("Failed to fetch expenses:", error);
@@ -159,7 +160,7 @@ export default function ExpenseScreen() {
 					<View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
 						<View style={{ alignItems: "flex-end" }}>
 							<ThemedText style={[styles.expenseAmount, { color: item.type === "income" ? "#16A34A" : "#DC2626" }]}>
-								{item.type === "income" ? "+" : "-"}${item.amount.toFixed(2)}
+								{item.type === "income" ? "+" : "-"}AED {item.amount.toFixed(2)}
 							</ThemedText>
 						</View>
 						<Pressable
@@ -195,18 +196,18 @@ export default function ExpenseScreen() {
 						<View style={styles.totalRow}>
 							<View style={styles.totalColLeft}>
 								<ThemedText style={styles.totalLabel}>Total Spent</ThemedText>
-								<ThemedText style={[styles.totalSpent, { color: "#FEE2E2" }]}>-${totalSpent.toFixed(2)}</ThemedText>
+								<ThemedText style={[styles.totalSpent, { color: "#FEE2E2" }]}>-AED {totalSpent.toFixed(2)}</ThemedText>
 							</View>
 							<View style={styles.totalColRight}>
 								<ThemedText style={styles.totalLabel}>Total Earned</ThemedText>
-								<ThemedText style={[styles.totalSpent, { color: "#BBF7D0" }]}>+${totalIncome.toFixed(2)}</ThemedText>
+								<ThemedText style={[styles.totalSpent, { color: "#BBF7D0" }]}>+AED {totalIncome.toFixed(2)}</ThemedText>
 							</View>
 						</View>
 						<View style={styles.balanceDivider} />
 						<View style={styles.balanceRow}>
 							<ThemedText style={styles.balanceLabel}>Monthly Balance</ThemedText>
 							<ThemedText style={[styles.balanceAmount, { color: monthlyBalance >= 0 ? "#BBF7D0" : "#FEE2E2" }]}>
-								{monthlyBalance >= 0 ? "+" : ""} ${monthlyBalance.toFixed(2)}
+								{monthlyBalance >= 0 ? "+" : ""} AED {monthlyBalance.toFixed(2)}
 							</ThemedText>
 						</View>
 						<ThemedText style={styles.totalPeriod}>This Month</ThemedText>
@@ -247,7 +248,7 @@ export default function ExpenseScreen() {
 								<ThemedText style={styles.modalMeta}>
 									{selectedExpense.category} • {selectedExpense.date}
 								</ThemedText>
-								<ThemedText style={styles.modalAmount}>${selectedExpense.amount.toFixed(2)}</ThemedText>
+								<ThemedText style={styles.modalAmount}>AED {selectedExpense.amount.toFixed(2)}</ThemedText>
 								{selectedExpense.notes ? <ThemedText style={styles.modalNotes}>{selectedExpense.notes}</ThemedText> : null}
 
 								<ThemedText style={styles.modalSubheading}>Receipt</ThemedText>

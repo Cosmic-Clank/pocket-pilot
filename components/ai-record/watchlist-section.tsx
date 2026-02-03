@@ -122,7 +122,7 @@ export function WatchlistSection() {
 							<View style={styles.watchlistRight}>
 								{prices ? (
 									<>
-										<ThemedText style={styles.watchlistPrice}>${prices.price.toFixed(2)}</ThemedText>
+										<ThemedText style={styles.watchlistPrice}>AED {prices.price.toFixed(2)}</ThemedText>
 										<View style={styles.watchlistChange}>
 											<Feather name={prices.change >= 0 ? "trending-up" : "trending-down"} size={14} color={prices.change >= 0 ? "#10B981" : "#EF4444"} />
 											<ThemedText style={[styles.watchlistChangeText, { color: prices.change >= 0 ? "#10B981" : "#EF4444" }]}>

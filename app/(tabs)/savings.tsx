@@ -8,7 +8,6 @@ import { ThemedButton } from "@/components/themed-button";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useState, useCallback, useRef } from "react";
 import { ThemedScrollView } from "@/components/themed-scroll-view";
-import { StatusBar } from "expo-status-bar";
 import { useFocusEffect } from "@react-navigation/native";
 import { AddBudgetBottomSheet } from "@/components/budget/add-budget-bottom-sheet";
 import { AddEmergencyFundBottomSheet } from "@/components/emergency-fund/add-emergency-fund-bottom-sheet";
@@ -102,13 +101,13 @@ export default function SavingsScreen() {
 							</View>
 							<View style={styles.autoInvestLeft}>
 								<ThemedText style={styles.autoInvestTitle}>Auto-Invest to Emergency Fund</ThemedText>
-								{autoInvest && profile?.emergency_fund_auto_invest ? <ThemedText style={styles.autoInvestAmount}>${profile.emergency_fund_auto_invest.toFixed(2)}/month</ThemedText> : <ThemedText style={styles.autoInvestStatus}>Not active</ThemedText>}
+								{autoInvest && profile?.emergency_fund_auto_invest ? <ThemedText style={styles.autoInvestAmount}>AED {profile.emergency_fund_auto_invest.toFixed(2)}/month</ThemedText> : <ThemedText style={styles.autoInvestStatus}>Not active</ThemedText>}
 							</View>
 							<Switch value={autoInvest} onValueChange={handleEmergencyFundToggle} trackColor={{ false: "#E5E7EB", true: "#86EFAC" }} thumbColor={autoInvest ? "#10B981" : "#9CA3AF"} />
 						</View>
 						{profile?.emergency_fund_auto_invest && (
 							<View style={styles.autoInvestTipContainer}>
-								<ThemedText style={styles.autoInvestTipContent}>${profile.emergency_fund_auto_invest.toFixed(2)} will be deducted from every income</ThemedText>
+								<ThemedText style={styles.autoInvestTipContent}>AED {profile.emergency_fund_auto_invest.toFixed(2)} will be deducted from every income</ThemedText>
 							</View>
 						)}
 					</View>
@@ -127,10 +126,6 @@ export default function SavingsScreen() {
 					{/* Monthly Budget Section */}
 					<MonthlyBudgets onAddBudgetPress={() => addBudgetModalRef.current?.present()} />
 
-					{/* Top Picks */}
-					<View style={{ marginHorizontal: -30 }}>
-						<TopPicksSection />
-					</View>
 					<View style={{ height: 50 }} />
 
 					{/* Add Budget Bottom Sheet Modal */}
@@ -171,7 +166,6 @@ export default function SavingsScreen() {
 						}}
 					/>
 				</ThemedScrollView>
-				<StatusBar style='dark' backgroundColor='#fff' />
 			</BottomSheetModalProvider>
 		</GestureHandlerRootView>
 	);

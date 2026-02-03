@@ -69,7 +69,7 @@ export default function CreateAccountScreen() {
 			</View>
 
 			<View style={styles.socialButtons}>
-				<GoogleAuth variant='custom' />{" "}
+				<GoogleAuth variant='custom' />
 			</View>
 			<View style={styles.dividerContainer}>
 				<View style={styles.dividerLine} />

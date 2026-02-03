@@ -40,7 +40,7 @@ export function MonthlyBudgets({ onAddBudgetPress, showHeader = true, limit }: M
 	useFocusEffect(
 		useCallback(() => {
 			loadBudgetData();
-		}, [loadBudgetData])
+		}, [loadBudgetData]),
 	);
 	// Helper function to calculate spent amount for a budget category in current month
 	const getSpentAmount = (category: string): number => {
@@ -99,7 +99,7 @@ export function MonthlyBudgets({ onAddBudgetPress, showHeader = true, limit }: M
 									<View>
 										<ThemedText style={styles.budgetName}>{categoryLabel}</ThemedText>
 										<ThemedText style={styles.budgetAmount}>
-											${spentAmount.toFixed(2)} of ${budgetAmount.toFixed(2)}
+											AED {spentAmount.toFixed(2)} of AED {budgetAmount.toFixed(2)}
 										</ThemedText>
 									</View>
 								</View>

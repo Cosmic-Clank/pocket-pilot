@@ -69,7 +69,7 @@ export function SavingsTipModal({ visible, onClose, loading, tip }: SavingsTipMo
 											</View>
 											<View style={{ flex: 1 }}>
 												<ThemedText style={styles.savingsLabel}>Potential Monthly Savings</ThemedText>
-												<ThemedText style={styles.savingsAmount}>${tip.estimated_monthly_savings.toFixed(0)}</ThemedText>
+												<ThemedText style={styles.savingsAmount}>AED {tip.estimated_monthly_savings.toFixed(0)}</ThemedText>
 											</View>
 										</LinearGradient>
 									</View>

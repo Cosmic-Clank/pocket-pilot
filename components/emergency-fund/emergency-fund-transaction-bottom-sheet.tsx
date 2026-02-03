@@ -94,7 +94,7 @@ export const EmergencyFundTransactionBottomSheet = React.forwardRef<BottomSheetM
 			const remaining = Math.max(0, maxAmount);
 			setAlertContent({
 				title: "Insufficient funds",
-				message: type === "deposit" ? `You only have $${remaining.toFixed(2)} available to deposit after your budgets and existing emergency fund.` : `You can only withdraw $${remaining.toFixed(2)} from your emergency fund.`,
+				message: type === "deposit" ? `You only have AED ${remaining.toFixed(2)} available to deposit after your budgets and existing emergency fund.` : `You can only withdraw AED ${remaining.toFixed(2)} from your emergency fund.`,
 			});
 			setAlertVisible(true);
 			return;
@@ -156,7 +156,7 @@ export const EmergencyFundTransactionBottomSheet = React.forwardRef<BottomSheetM
 				<View style={styles.header}>
 					<View style={{ flex: 1 }}>
 						<ThemedText style={styles.title}>{type === "deposit" ? "Deposit to Emergency Fund" : "Withdraw from Emergency Fund"}</ThemedText>
-						<ThemedText style={styles.subtitle}>{type === "deposit" ? (maxAmount <= 0 ? "No available funds to deposit" : `Available: $${maxAmount.toFixed(2)} (after budgets)`) : `Available to withdraw: $${maxAmount.toFixed(2)}`}</ThemedText>
+						<ThemedText style={styles.subtitle}>{type === "deposit" ? (maxAmount <= 0 ? "No available funds to deposit" : `Available: AED ${maxAmount.toFixed(2)} (after budgets)`) : `Available to withdraw: AED ${maxAmount.toFixed(2)}`}</ThemedText>
 					</View>
 					<TouchableOpacity onPress={handleClosePress} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
 						<Feather name='x' size={24} color='#6B7280' />
@@ -168,7 +168,7 @@ export const EmergencyFundTransactionBottomSheet = React.forwardRef<BottomSheetM
 					<View style={styles.formGroup}>
 						<ThemedText style={styles.label}>Amount</ThemedText>
 						<ThemedInput placeholder='0.00' value={amount} onChangeText={setAmount} keyboardType='decimal-pad' icon='dollar-sign' editable={!isSaving} />
-						<ThemedText style={styles.hint}>Current balance: ${currentBalance.toFixed(2)}</ThemedText>
+						<ThemedText style={styles.hint}>Current balance: AED {currentBalance.toFixed(2)}</ThemedText>
 					</View>
 
 					{/* Submit Button */}

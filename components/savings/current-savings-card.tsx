@@ -5,18 +5,20 @@ import { ThemedText } from "@/components/themed-text";
 import { useState, useCallback } from "react";
 import { fetchTransactions, calculateCurrentMonthBalanceAfterBudget, type TransactionRecord } from "@/services/transaction-service";
 import { fetchBudgets } from "@/services/budget-service";
+import { fetchProfile } from "@/services/profile-service";
+import { supabase } from "@/utils/supabase";
 import { useFocusEffect } from "@react-navigation/native";
 
 export function CurrentSavingsCard() {
 	const [currentSavings, setCurrentSavings] = useState(0);
+	const [savingsGoal, setSavingsGoal] = useState<number | null>(null);
 	const [loading, setLoading] = useState(true);
 
-	const savingsGoal = 5000;
-	const progressPercentage = Math.max(0, Math.min(100, (currentSavings / savingsGoal) * 100));
+	const progressPercentage = savingsGoal ? Math.max(0, Math.min(100, (currentSavings / savingsGoal) * 100)) : 0;
 
 	const loadSavings = useCallback(async () => {
 		setLoading(true);
-		const [txResult, budgetResult] = await Promise.all([fetchTransactions(), fetchBudgets()]);
+		const [txResult, budgetResult, profileResult] = await Promise.all([fetchTransactions(), fetchBudgets(), fetchProfile()]);
 
 		if (txResult.success) {
 			const transactions = (txResult.data || []) as TransactionRecord[];
@@ -26,6 +28,11 @@ export function CurrentSavingsCard() {
 			const savingsData = calculateCurrentMonthBalanceAfterBudget(transactions, budgets);
 
 			setCurrentSavings(savingsData.balanceAfterBudget);
+		}
+
+		// Set savings goal from profile
+		if (profileResult.success && profileResult.data?.monthly_saving_goal) {
+			setSavingsGoal(profileResult.data.monthly_saving_goal);
 		}
 
 		setLoading(false);
@@ -43,7 +50,7 @@ export function CurrentSavingsCard() {
 				<View style={styles.savingsLeft}>
 					<ThemedText style={styles.savingsLabel}>Current Monthly Savings {"\n"} (After Budget)</ThemedText>
 					<ThemedText type='defaultSemiBold' style={styles.savingsAmount}>
-						{loading ? "..." : `$${currentSavings.toFixed(2)}`}
+						{loading ? "..." : `AED ${currentSavings.toFixed(2)}`}
 					</ThemedText>
 				</View>
 				<View style={styles.savingsIcon}>
@@ -55,7 +62,7 @@ export function CurrentSavingsCard() {
 					<View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
 				</View>
 			</View>
-			<ThemedText style={styles.progressText}>{loading ? "..." : `${Math.round(progressPercentage)}% of your $${savingsGoal.toLocaleString()} goal`}</ThemedText>
+			<ThemedText style={styles.progressText}>{loading ? "..." : `${Math.round(progressPercentage)}% of your AED ${savingsGoal ? savingsGoal.toLocaleString() : "0"} goal`}</ThemedText>
 		</LinearGradient>
 	);
 }

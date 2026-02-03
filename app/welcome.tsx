@@ -6,7 +6,6 @@ import { ThemedScrollView } from "@/components/themed-scroll-view";
 import { ThemedText } from "@/components/themed-text";
 import { supabase } from "@/utils/supabase";
 import { useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -88,7 +87,6 @@ export default function WelcomeBackScreen() {
 			</View>
 
 			<ThemedAlert visible={alert.visible} title={alert.title} message={alert.message} onDismiss={() => setAlert({ ...alert, visible: false })} />
-			<StatusBar style='light' backgroundColor='transparent' />
 		</ThemedScrollView>
 	);
 }

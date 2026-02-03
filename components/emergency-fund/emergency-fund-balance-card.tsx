@@ -19,7 +19,7 @@ export function EmergencyFundBalanceCard({ balance, onDeposit, onWithdraw }: Eme
 				</View>
 				<View style={styles.headerContent}>
 					<ThemedText style={styles.label}>Emergency Fund Balance</ThemedText>
-					<ThemedText style={styles.amount}>${balance.toFixed(2)}</ThemedText>
+					<ThemedText style={styles.amount}>AED {balance.toFixed(2)}</ThemedText>
 				</View>
 			</View>
 

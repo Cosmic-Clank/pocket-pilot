@@ -3,7 +3,6 @@ import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { StatusBar } from "expo-status-bar";
 import { useState, useEffect } from "react";
 import { ThemedText } from "@/components/themed-text";
 import { fetchTransactions, type TransactionRecord } from "@/services/transaction-service";
@@ -58,7 +57,7 @@ export default function WeeklyReportScreen() {
 					<LinearGradient colors={["#EF4444", "#DC2626"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.overviewCard}>
 						<Feather name='trending-down' size={24} color='#FFFFFF' />
 						<ThemedText style={styles.overviewLabel}>Total Spent</ThemedText>
-						<ThemedText style={styles.overviewAmount}>${stats.totalSpending.toFixed(0)}</ThemedText>
+						<ThemedText style={styles.overviewAmount}>AED {stats.totalSpending.toFixed(0)}</ThemedText>
 						{stats.weekOverWeekChange !== 0 && (
 							<View style={styles.changeContainer}>
 								<Feather name={stats.weekOverWeekChange > 0 ? "arrow-up" : "arrow-down"} size={12} color='#FFFFFF' />
@@ -70,7 +69,7 @@ export default function WeeklyReportScreen() {
 					<LinearGradient colors={["#10B981", "#059669"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.overviewCard}>
 						<Feather name='trending-up' size={24} color='#FFFFFF' />
 						<ThemedText style={styles.overviewLabel}>Total Income</ThemedText>
-						<ThemedText style={styles.overviewAmount}>${stats.totalIncome.toFixed(0)}</ThemedText>
+						<ThemedText style={styles.overviewAmount}>AED {stats.totalIncome.toFixed(0)}</ThemedText>
 					</LinearGradient>
 				</View>
 
@@ -78,7 +77,7 @@ export default function WeeklyReportScreen() {
 					<View style={[styles.overviewCard, { backgroundColor: "#F3F4F6" }]}>
 						<Feather name='activity' size={24} color='#155DFC' />
 						<ThemedText style={[styles.overviewLabel, { color: "#6B7280" }]}>Daily Average</ThemedText>
-						<ThemedText style={[styles.overviewAmount, { color: "#111827" }]}>${stats.averageDailySpending.toFixed(0)}</ThemedText>
+						<ThemedText style={[styles.overviewAmount, { color: "#111827" }]}>AED {stats.averageDailySpending.toFixed(0)}</ThemedText>
 					</View>
 
 					<View style={[styles.overviewCard, { backgroundColor: "#F3F4F6" }]}>
@@ -114,7 +113,7 @@ export default function WeeklyReportScreen() {
 									<View style={[styles.bar, { height: Math.max(barHeight, 4), backgroundColor: isToday ? "#155DFC" : "#E5E7EB" }]} />
 								</View>
 								<ThemedText style={[styles.barLabel, isToday && styles.barLabelActive]}>{day.dayName}</ThemedText>
-								<ThemedText style={styles.barAmount}>${day.amount.toFixed(0)}</ThemedText>
+								<ThemedText style={styles.barAmount}>AED {day.amount.toFixed(0)}</ThemedText>
 							</View>
 						);
 					})}
@@ -148,7 +147,7 @@ export default function WeeklyReportScreen() {
 						</View>
 
 						<View style={styles.categoryRight}>
-							<ThemedText style={styles.categoryAmount}>${cat.amount.toFixed(0)}</ThemedText>
+							<ThemedText style={styles.categoryAmount}>AED {cat.amount.toFixed(0)}</ThemedText>
 							<ThemedText style={styles.categoryPercent}>{cat.percentage.toFixed(1)}%</ThemedText>
 						</View>
 
@@ -181,7 +180,7 @@ export default function WeeklyReportScreen() {
 							</View>
 							<ThemedText style={styles.categoryName}>{cat.category.charAt(0).toUpperCase() + cat.category.slice(1)}</ThemedText>
 						</View>
-						<ThemedText style={styles.categoryAmount}>${cat.amount.toFixed(0)}</ThemedText>
+						<ThemedText style={styles.categoryAmount}>AED {cat.amount.toFixed(0)}</ThemedText>
 					</View>
 				))}
 			</View>
@@ -261,7 +260,6 @@ export default function WeeklyReportScreen() {
 				{renderAllCategories()}
 				<View style={{ height: 40 }} />
 			</ScrollView>
-			<StatusBar style='light' />
 		</View>
 	);
 }
