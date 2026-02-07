@@ -1,5 +1,5 @@
 import { Modal, View, StyleSheet, Pressable, ScrollView, ActivityIndicator } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { ThemedText } from "@/components/themed-text";
 import { type AiSavingsTip } from "@/services/notification-service";
@@ -65,7 +65,7 @@ export function SavingsTipModal({ visible, onClose, loading, tip }: SavingsTipMo
 									<View style={styles.savingsCard}>
 										<LinearGradient colors={["#ECFDF5", "#D1FAE5"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.savingsGradient}>
 											<View style={styles.savingsIcon}>
-												<Feather name='dollar-sign' size={24} color='#10B981' />
+												<MaterialCommunityIcons name='piggy-bank-outline' size={24} color='#10B981' />
 											</View>
 											<View style={{ flex: 1 }}>
 												<ThemedText style={styles.savingsLabel}>Potential Monthly Savings</ThemedText>

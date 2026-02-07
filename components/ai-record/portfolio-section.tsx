@@ -22,6 +22,16 @@ interface HoldingRow {
 	pnlPercent: number;
 }
 
+const NETWORK_ERROR_MESSAGE = "Network error. Please refresh.";
+
+function isHtmlResponse(response: Response, text?: string): boolean {
+	const contentType = response.headers.get("content-type");
+	if (contentType?.toLowerCase().includes("text/html")) {
+		return true;
+	}
+	return text ? /<!doctype html|<html/i.test(text) : false;
+}
+
 export function PortfolioSection() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
@@ -76,8 +86,17 @@ export function PortfolioSection() {
 			});
 
 			if (!priceRes.ok) {
+				const text = await priceRes.text();
+				if (isHtmlResponse(priceRes, text)) {
+					throw new Error(NETWORK_ERROR_MESSAGE);
+				}
 				throw new Error("Failed to fetch prices");
 			}
+
+			if (isHtmlResponse(priceRes)) {
+				throw new Error(NETWORK_ERROR_MESSAGE);
+			}
+
 			const priceData = (await priceRes.json()) as Record<string, PriceResponseItem>;
 
 			const rows: HoldingRow[] = symbols.map((symbol) => {

@@ -81,8 +81,8 @@ export const ManualBudgetForm = ({ initialCategory = "", initialAmount = "", onS
 
 			{/* Amount Input */}
 			<View style={styles.formGroup}>
-				<ThemedText style={styles.label}>Budget Amount ($)</ThemedText>
-				<ThemedInput placeholder='Enter budget amount' value={amount} onChangeText={setAmount} keyboardType='decimal-pad' editable={!isSaving} />
+				<ThemedText style={styles.label}>Budget Amount (AED)</ThemedText>
+				<ThemedInput placeholder='Enter budget amount' value={amount} onChangeText={setAmount} keyboardType='decimal-pad' icon='hash' editable={!isSaving} />
 			</View>
 
 			{/* Submit Button */}

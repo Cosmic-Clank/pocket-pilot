@@ -12,6 +12,16 @@ interface StockPriceData {
 	changePercent: number;
 }
 
+const NETWORK_ERROR_MESSAGE = "Network error. Please refresh.";
+
+function isHtmlResponse(response: Response, text?: string): boolean {
+	const contentType = response.headers.get("content-type");
+	if (contentType?.toLowerCase().includes("text/html")) {
+		return true;
+	}
+	return text ? /<!doctype html|<html/i.test(text) : false;
+}
+
 export function WatchlistSection() {
 	const [loading, setLoading] = useState(true);
 	const [watchlist, setWatchlist] = useState<WatchlistRecord[]>([]);
@@ -43,10 +53,20 @@ export function WatchlistSection() {
 				body: JSON.stringify({ symbols }),
 			});
 
-			if (response.ok) {
-				const data = await response.json();
-				setPriceData(data);
+			if (!response.ok) {
+				const text = await response.text();
+				if (isHtmlResponse(response, text)) {
+					throw new Error(NETWORK_ERROR_MESSAGE);
+				}
+				throw new Error("Failed to fetch prices");
 			}
+
+			if (isHtmlResponse(response)) {
+				throw new Error(NETWORK_ERROR_MESSAGE);
+			}
+
+			const data = (await response.json()) as Record<string, StockPriceData>;
+			setPriceData(data);
 		} catch (error) {
 			console.error("Failed to fetch price data:", error);
 		}

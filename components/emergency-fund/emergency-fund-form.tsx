@@ -59,7 +59,7 @@ export const EmergencyFundForm = ({ onSuccess }: EmergencyFundFormProps) => {
 			{/* Amount Input */}
 			<View style={styles.formGroup}>
 				<ThemedText style={styles.label}>Amount</ThemedText>
-				<ThemedInput placeholder='0.00' value={amount} onChangeText={setAmount} keyboardType='decimal-pad' icon='dollar-sign' editable={!isSaving} />
+				<ThemedInput placeholder='0.00' value={amount} onChangeText={setAmount} keyboardType='decimal-pad' icon='hash' editable={!isSaving} />
 			</View>
 
 			{/* Submit Button */}

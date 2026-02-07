@@ -167,7 +167,7 @@ export const EmergencyFundTransactionBottomSheet = React.forwardRef<BottomSheetM
 				<View style={styles.formContainer}>
 					<View style={styles.formGroup}>
 						<ThemedText style={styles.label}>Amount</ThemedText>
-						<ThemedInput placeholder='0.00' value={amount} onChangeText={setAmount} keyboardType='decimal-pad' icon='dollar-sign' editable={!isSaving} />
+						<ThemedInput placeholder='0.00' value={amount} onChangeText={setAmount} keyboardType='decimal-pad' icon='hash' editable={!isSaving} />
 						<ThemedText style={styles.hint}>Current balance: AED {currentBalance.toFixed(2)}</ThemedText>
 					</View>
 

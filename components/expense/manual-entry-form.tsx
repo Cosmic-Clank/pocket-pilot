@@ -127,7 +127,7 @@ export const ManualEntryForm = ({ initialTitle = "", initialAmount = "", initial
 			{/* Amount Field */}
 			<View style={styles.formGroup}>
 				<ThemedText style={styles.label}>Amount</ThemedText>
-				<ThemedInput placeholder='0.00' value={amount} onChangeText={setAmount} keyboardType='decimal-pad' icon='dollar-sign' />
+				<ThemedInput placeholder='0.00' value={amount} onChangeText={setAmount} keyboardType='decimal-pad' icon='hash' />
 			</View>
 
 			{/* Category Dropdown */}

@@ -6,6 +6,7 @@ import { BottomSheetDefaultBackdropProps } from "@gorhom/bottom-sheet/lib/typesc
 import { ThemedText } from "@/components/themed-text";
 import { ThemedButton } from "@/components/themed-button";
 import { updateProfile, getProfile } from "@/services/profile-service";
+import { scheduleWeeklyReport, cancelNotificationByType } from "@/services/notifications-service";
 import { supabase } from "@/utils/supabase";
 import { Toast } from "toastify-react-native";
 
@@ -70,6 +71,18 @@ export const SettingsBottomSheet = React.forwardRef<BottomSheetModal, SettingsBo
 				budget_notif: budgetNotif,
 				report_notif: reportNotif,
 			});
+
+			// Handle weekly report notification toggle
+			if (reportNotif) {
+				// Enable weekly report notification
+				const result = await scheduleWeeklyReport();
+				if (!result.success) {
+					console.warn("Failed to schedule weekly report:", result.message);
+				}
+			} else {
+				// Disable weekly report notification
+				await cancelNotificationByType("weekly_report");
+			}
 
 			Toast.success("Settings saved successfully");
 			setHasChanges(false);

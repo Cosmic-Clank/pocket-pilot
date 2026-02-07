@@ -1,5 +1,7 @@
 import * as Notifications from "expo-notifications";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getProfile } from "./profile-service";
+import { supabase } from "@/utils/supabase";
 
 // Configure notification behavior
 Notifications.setNotificationHandler({
@@ -21,6 +23,36 @@ interface ScheduledNotification {
 }
 
 const NOTIFICATIONS_STORAGE_KEY = "pocket_pilot_notifications";
+
+/**
+ * Get current user's notification preferences
+ */
+async function getUserNotificationPreferences(): Promise<{ salary_notif: boolean; budget_notif: boolean; report_notif: boolean }> {
+	try {
+		const {
+			data: { user },
+		} = await supabase.auth.getUser();
+
+		if (!user) {
+			return { salary_notif: true, budget_notif: true, report_notif: true };
+		}
+
+		const profile = await getProfile(user.id);
+		if (!profile) {
+			return { salary_notif: true, budget_notif: true, report_notif: true };
+		}
+
+		return {
+			salary_notif: profile.salary_notif ?? true,
+			budget_notif: profile.budget_notif ?? true,
+			report_notif: profile.report_notif ?? true,
+		};
+	} catch (error) {
+		console.error("Error fetching notification preferences:", error);
+		// Default to enabled if there's an error
+		return { salary_notif: true, budget_notif: true, report_notif: true };
+	}
+}
 
 /**
  * Request notification permissions from the user
@@ -234,6 +266,12 @@ export async function clearAllNotifications(): Promise<boolean> {
  * Called when user sets their monthly income date
  */
 export async function scheduleSalaryReminder(dayOfMonth: number, salaryAmount?: number): Promise<{ success: boolean; message: string }> {
+	const prefs = await getUserNotificationPreferences();
+
+	if (!prefs.salary_notif) {
+		return { success: true, message: "Salary notifications are disabled" };
+	}
+
 	const title = "Salary Day Reminder 💰";
 	const body = salaryAmount ? `You're expecting AED ${salaryAmount.toFixed(2)} today` : "It's your salary day! Don't forget to log your income.";
 
@@ -258,4 +296,102 @@ export async function scheduleSavingsCheckIn(dayOfMonth: number, savingsGoal?: n
 	const body = savingsGoal ? `Track your progress towards your AED ${savingsGoal.toFixed(2)} savings goal` : "Check your savings progress this month!";
 
 	return scheduleMonthlyNotification(dayOfMonth, title, body, "savings_checkin", false);
+}
+
+/**
+ * Schedule a weekly report notification (Monday at 9 AM)
+ * Only schedules if report_notif preference is enabled
+ */
+export async function scheduleWeeklyReport(): Promise<{ success: boolean; message: string }> {
+	try {
+		const prefs = await getUserNotificationPreferences();
+
+		if (!prefs.report_notif) {
+			return { success: true, message: "Weekly reports are disabled" };
+		}
+
+		// Request permissions first
+		const hasPermission = await requestNotificationPermissions();
+		if (!hasPermission) {
+			console.warn("Notification permissions not granted");
+		}
+
+		// Schedule for Monday at 9 AM
+		const notificationId = await Notifications.scheduleNotificationAsync({
+			content: {
+				title: "Weekly Report 📈",
+				body: "Check your spending summary and financial insights for the week",
+				data: { type: "weekly_report" },
+			},
+			trigger: {
+				weekday: 2, // Monday (1 = Sunday, 2 = Monday, etc.)
+				hour: 9,
+				minute: 0,
+				type: "weekly" as any,
+			},
+		});
+
+		// Store notification metadata
+		await saveNotificationMetadata({
+			id: notificationId,
+			type: "weekly_report",
+			dayOfMonth: 2, // Monday
+			title: "Weekly Report 📈",
+			body: "Check your spending summary and financial insights for the week",
+			createdAt: new Date().toISOString(),
+		});
+
+		console.log(`Weekly report notification scheduled: ${notificationId}`);
+
+		return {
+			success: true,
+			message: "Weekly report notification scheduled for Monday at 9 AM",
+		};
+	} catch (error) {
+		console.error("Error scheduling weekly report notification:", error);
+		return {
+			success: false,
+			message: `Failed to schedule weekly report: ${error instanceof Error ? error.message : "Unknown error"}`,
+		};
+	}
+}
+
+/**
+ * Send a budget exceeded instant notification
+ * Only sends if budget_notif preference is enabled
+ */
+export async function sendBudgetExceededNotification(categoryName: string, budgetAmount: number, currentSpending: number): Promise<{ success: boolean; message: string }> {
+	try {
+		const prefs = await getUserNotificationPreferences();
+
+		if (!prefs.budget_notif) {
+			console.log(`Budget notification for ${categoryName} suppressed (notifications disabled)`);
+			return { success: true, message: "Budget notifications are disabled" };
+		}
+
+		const overspentBy = currentSpending - budgetAmount;
+		const title = "Budget Exceeded ⚠️";
+		const body = `Your ${categoryName} spending (AED ${currentSpending.toFixed(2)}) has exceeded your budget of AED ${budgetAmount.toFixed(2)} by AED ${overspentBy.toFixed(2)}`;
+
+		await Notifications.scheduleNotificationAsync({
+			content: {
+				title,
+				body,
+				data: { type: "budget_exceeded", category: categoryName },
+			},
+			trigger: null, // Send immediately
+		});
+
+		console.log(`Budget exceeded notification sent for ${categoryName}`);
+		return {
+			success: true,
+			message: `Budget exceeded notification sent for ${categoryName}`,
+		};
+	} catch (error) {
+		console.error("Error sending budget exceeded notification:", error);
+		return {
+			success: false,
+			message: `Failed to send budget notification: ${error instanceof Error ? error.message : "Unknown error"}`,
+		};
+	}
 }

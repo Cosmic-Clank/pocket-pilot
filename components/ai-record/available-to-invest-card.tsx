@@ -67,7 +67,7 @@ export function AvailableToInvestCard() {
 					</ThemedText>
 				</View>
 				<View style={styles.icon}>
-					<MaterialCommunityIcons name='currency-usd' size={32} color='#FFFFFF' />
+					<MaterialCommunityIcons name='piggy-bank-outline' size={32} color='#FFFFFF' />
 				</View>
 			</View>
 			<View style={styles.statsContainer}>

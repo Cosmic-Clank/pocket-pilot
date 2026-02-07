@@ -6,8 +6,8 @@
 
 export const API_CONFIG = {
 	// Backend API Base URL
-	BASE_URL: "http://192.168.1.139:8000",
-	// BASE_URL: "https://pocket-pilot-api-89654179807c.herokuapp.com",
+	// BASE_URL: "http://192.168.1.139:8000",
+	BASE_URL: "https://pocket-pilot-api-89654179807c.herokuapp.com",
 
 	// API Endpoints
 	ENDPOINTS: {

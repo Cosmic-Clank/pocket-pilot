@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
@@ -9,6 +9,7 @@ import { calculateCurrentMonthBalanceAfterBudget, fetchTransactions } from "@/se
 import { fetchBudgets } from "@/services/budget-service";
 import { executeTrade } from "@/services/stock-trade-service";
 import { addToWatchlist, isInWatchlist } from "@/services/stock-watchlist-service";
+import { useFocusEffect } from "expo-router";
 
 type TopPick = {
 	id: string;
@@ -37,68 +38,70 @@ export function TopPicksSection() {
 	const [picks, setPicks] = useState<TopPick[]>([]);
 	const [error, setError] = useState<string | null>(null);
 
-	useEffect(() => {
-		let isMounted = true;
+	useFocusEffect(
+		useCallback(() => {
+			let isMounted = true;
 
-		const loadTopPicks = async () => {
-			try {
-				setLoading(true);
-				setError(null);
+			const loadTopPicks = async () => {
+				try {
+					setLoading(true);
+					setError(null);
 
-				// Pull the latest financial context from Supabase before requesting picks
-				const [txResult, budgetResult] = await Promise.all([fetchTransactions(), fetchBudgets()]);
+					// Pull the latest financial context from Supabase before requesting picks
+					const [txResult, budgetResult] = await Promise.all([fetchTransactions(), fetchBudgets()]);
 
-				if (!txResult.success || !budgetResult.success) {
-					const firstError = txResult.error || budgetResult.error || "Failed to load financial data";
-					throw new Error(firstError);
+					if (!txResult.success || !budgetResult.success) {
+						const firstError = txResult.error || budgetResult.error || "Failed to load financial data";
+						throw new Error(firstError);
+					}
+
+					const monthlyBalance = calculateCurrentMonthBalanceAfterBudget(txResult.data, budgetResult.data);
+					console.log("Monthly balance after budget:", monthlyBalance);
+
+					const payload = {
+						monthly_balance_after_budget: monthlyBalance.balanceAfterBudget,
+					};
+
+					const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.TOP_PICKS), {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify(payload),
+					});
+
+					if (!response.ok) {
+						const errorText = await response.text();
+						throw new Error(errorText || "Top picks request failed");
+					}
+
+					const body = (await response.json()) as TopPicksApiResponse;
+					const apiPicks = body.picks ?? body.data ?? [];
+
+					if (isMounted) {
+						setPicks(apiPicks);
+					}
+				} catch (err) {
+					console.error("Top picks fetch failed:", err);
+					if (isMounted) {
+						const message = err instanceof Error ? err.message : "Failed to load recommendations";
+						setError(message);
+						setPicks([]);
+					}
+				} finally {
+					if (isMounted) {
+						setLoading(false);
+					}
 				}
+			};
 
-				const monthlyBalance = calculateCurrentMonthBalanceAfterBudget(txResult.data, budgetResult.data);
-				console.log("Monthly balance after budget:", monthlyBalance);
+			loadTopPicks();
 
-				const payload = {
-					monthly_balance_after_budget: monthlyBalance.balanceAfterBudget,
-				};
-
-				const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.TOP_PICKS), {
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify(payload),
-				});
-
-				if (!response.ok) {
-					const errorText = await response.text();
-					throw new Error(errorText || "Top picks request failed");
-				}
-
-				const body = (await response.json()) as TopPicksApiResponse;
-				const apiPicks = body.picks ?? body.data ?? [];
-
-				if (isMounted) {
-					setPicks(apiPicks);
-				}
-			} catch (err) {
-				console.error("Top picks fetch failed:", err);
-				if (isMounted) {
-					const message = err instanceof Error ? err.message : "Failed to load recommendations";
-					setError(message);
-					setPicks([]);
-				}
-			} finally {
-				if (isMounted) {
-					setLoading(false);
-				}
-			}
-		};
-
-		loadTopPicks();
-
-		return () => {
-			isMounted = false;
-		};
-	}, []);
+			return () => {
+				isMounted = false;
+			};
+		}, []),
+	);
 
 	return (
 		<View>
@@ -109,7 +112,7 @@ export function TopPicksSection() {
 
 			{error ? (
 				<View style={styles.errorBox}>
-					<ThemedText style={styles.errorText}>{error}</ThemedText>
+					<ThemedText style={styles.errorText}>{"Network Error, please try again later."}</ThemedText>
 				</View>
 			) : null}
 
@@ -284,7 +287,7 @@ function StockCard({ pick }: StockCardProps) {
 				</View>
 			</View>
 
-			<ThemedButton title={`$ Invest ${pick.suggestedInvestment}`} variant='primary' style={styles.investButton} onPress={handleInvest} loading={investing} disabled={investing} />
+			<ThemedButton title={`AED Invest ${pick.suggestedInvestment}`} variant='primary' style={styles.investButton} onPress={handleInvest} loading={investing} disabled={investing} />
 			<ThemedButton title={inWatchlist ? "✓ Added to Watchlist" : "Add to Watchlist"} variant='outline' style={[styles.watchlistButton, inWatchlist && styles.watchlistButtonAdded]} onPress={handleAddToWatchlist} loading={addingToWatchlist} disabled={addingToWatchlist || inWatchlist} />
 
 			<ThemedAlert visible={alertVisible} title={alertContent.title} message={alertContent.message} onDismiss={() => setAlertVisible(false)} />
