@@ -2,47 +2,28 @@ import { View, StyleSheet } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
-import { useState, useCallback } from "react";
-import { fetchTransactions, calculateCurrentMonthBalanceAfterBudget, type TransactionRecord } from "@/services/transaction-service";
-import { fetchBudgets } from "@/services/budget-service";
-import { fetchProfile } from "@/services/profile-service";
-import { supabase } from "@/utils/supabase";
-import { useFocusEffect } from "@react-navigation/native";
+import { useMemo } from "react";
+import { calculateCurrentMonthBalanceAfterBudget } from "@/services/transaction-service";
+import { useTransactions } from "@/hooks/queries/use-transactions";
+import { useBudgets } from "@/hooks/queries/use-budgets";
+import { useProfile } from "@/hooks/queries/use-profile";
 
 export function CurrentSavingsCard() {
-	const [currentSavings, setCurrentSavings] = useState(0);
-	const [savingsGoal, setSavingsGoal] = useState<number | null>(null);
-	const [loading, setLoading] = useState(true);
+	// Fetch data using React Query
+	const { data: transactions = [], isLoading: txLoading } = useTransactions();
+	const { data: budgets = [], isLoading: budgetsLoading } = useBudgets();
+	const { data: profile, isLoading: profileLoading } = useProfile();
 
-	const progressPercentage = savingsGoal ? Math.max(0, Math.min(100, (currentSavings / savingsGoal) * 100)) : 0;
+	const loading = txLoading || budgetsLoading || profileLoading;
 
-	const loadSavings = useCallback(async () => {
-		setLoading(true);
-		const [txResult, budgetResult, profileResult] = await Promise.all([fetchTransactions(), fetchBudgets(), fetchProfile()]);
+	// Calculate current savings
+	const currentSavings = useMemo(() => {
+		const savingsData = calculateCurrentMonthBalanceAfterBudget(transactions, budgets);
+		return savingsData.balanceAfterBudget;
+	}, [transactions, budgets]);
 
-		if (txResult.success) {
-			const transactions = (txResult.data || []) as TransactionRecord[];
-			const budgets = budgetResult.success ? budgetResult.data : [];
-
-			// Calculate current month savings after budget allocations
-			const savingsData = calculateCurrentMonthBalanceAfterBudget(transactions, budgets);
-
-			setCurrentSavings(savingsData.balanceAfterBudget);
-		}
-
-		// Set savings goal from profile
-		if (profileResult.success && profileResult.data?.monthly_saving_goal) {
-			setSavingsGoal(profileResult.data.monthly_saving_goal);
-		}
-
-		setLoading(false);
-	}, []);
-
-	useFocusEffect(
-		useCallback(() => {
-			loadSavings();
-		}, [loadSavings]),
-	);
+	const savingsGoal = profile?.monthly_saving_goal ?? 5000;
+	const progressPercentage = Math.max(0, Math.min(100, (currentSavings / savingsGoal) * 100));
 
 	return (
 		<LinearGradient colors={["#00C950", "#009966"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.savingsCard}>
@@ -62,7 +43,7 @@ export function CurrentSavingsCard() {
 					<View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
 				</View>
 			</View>
-			<ThemedText style={styles.progressText}>{loading ? "..." : `${Math.round(progressPercentage)}% of your AED ${savingsGoal ? savingsGoal.toLocaleString() : "0"} goal`}</ThemedText>
+			<ThemedText style={styles.progressText}>{loading ? "..." : `${Math.round(progressPercentage)}% of your AED ${savingsGoal.toLocaleString()} goal`}</ThemedText>
 		</LinearGradient>
 	);
 }

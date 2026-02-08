@@ -1,39 +1,23 @@
 import { View, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
-import { useState, useCallback } from "react";
-import { fetchTransactions, calculateTotalBalance, type TransactionRecord } from "@/services/transaction-service";
-import { useFocusEffect } from "@react-navigation/native";
+import { useMemo } from "react";
+import { calculateTotalBalance } from "@/services/transaction-service";
+import { useTransactions } from "@/hooks/queries/use-transactions";
 
 export function FinancialOverviewCard() {
-	const [totalBalance, setTotalBalance] = useState(0);
-	const [income, setIncome] = useState(0);
-	const [expenses, setExpenses] = useState(0);
-	const [loading, setLoading] = useState(true);
+	// Fetch transactions using React Query
+	const { data: transactions = [], isLoading: loading } = useTransactions();
 
-	const loadFinancialData = useCallback(async () => {
-		setLoading(true);
-		const result = await fetchTransactions();
-
-		if (result.success) {
-			const transactions = result.data as TransactionRecord[];
-
-			// Calculate total balance across all time
-			const balanceData = calculateTotalBalance(transactions);
-
-			setIncome(balanceData.income);
-			setExpenses(balanceData.expenses);
-			setTotalBalance(balanceData.balance);
-		}
-
-		setLoading(false);
-	}, []);
-
-	useFocusEffect(
-		useCallback(() => {
-			loadFinancialData();
-		}, [loadFinancialData]),
-	);
+	// Calculate financial data from transactions
+	const { totalBalance, income, expenses } = useMemo(() => {
+		const balanceData = calculateTotalBalance(transactions);
+		return {
+			totalBalance: balanceData.balance,
+			income: balanceData.income,
+			expenses: balanceData.expenses,
+		};
+	}, [transactions]);
 
 	return (
 		<View style={styles.card}>

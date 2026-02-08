@@ -4,7 +4,7 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedButton } from "@/components/themed-button";
 import { ThemedInput } from "@/components/themed-input";
 import { ThemedAlert } from "@/components/themed-alert";
-import { updateEmergencyFundAutoInvest } from "@/services/profile-service";
+import { useUpdateEmergencyFundAutoInvest } from "@/hooks/mutations/use-profile-mutations";
 
 interface EmergencyFundFormProps {
 	onSuccess?: () => void;
@@ -12,12 +12,14 @@ interface EmergencyFundFormProps {
 
 export const EmergencyFundForm = ({ onSuccess }: EmergencyFundFormProps) => {
 	const [amount, setAmount] = useState("");
-	const [isSaving, setIsSaving] = useState(false);
 	const [alertVisible, setAlertVisible] = useState(false);
 	const [alertContent, setAlertContent] = useState<{ title: string; message: string }>({
 		title: "",
 		message: "",
 	});
+
+	// Use React Query mutation for updating emergency fund
+	const updateMutation = useUpdateEmergencyFundAutoInvest();
 
 	const handleSave = async () => {
 		// Validate amount
@@ -30,26 +32,33 @@ export const EmergencyFundForm = ({ onSuccess }: EmergencyFundFormProps) => {
 			return;
 		}
 
-		setIsSaving(true);
-		const result = await updateEmergencyFundAutoInvest({
-			amount: parseFloat(amount),
-		});
-
-		setIsSaving(false);
-
-		if (result.success) {
-			// Reset form
-			setAmount("");
-
-			// Notify parent component
-			onSuccess?.();
-		} else {
-			setAlertContent({
-				title: "Error",
-				message: result.error || "An error occurred while saving.",
-			});
-			setAlertVisible(true);
-		}
+		// Use mutation to update emergency fund
+		updateMutation.mutate(
+			{ amount: parseFloat(amount) },
+			{
+				onSuccess: (result) => {
+					if (result.success) {
+						// Reset form
+						setAmount("");
+						// Notify parent component
+						onSuccess?.();
+					} else {
+						setAlertContent({
+							title: "Error",
+							message: result.error || "An error occurred while saving.",
+						});
+						setAlertVisible(true);
+					}
+				},
+				onError: (error) => {
+					setAlertContent({
+						title: "Error",
+						message: error instanceof Error ? error.message : "An error occurred while saving.",
+					});
+					setAlertVisible(true);
+				},
+			}
+		);
 	};
 
 	return (
@@ -59,11 +68,11 @@ export const EmergencyFundForm = ({ onSuccess }: EmergencyFundFormProps) => {
 			{/* Amount Input */}
 			<View style={styles.formGroup}>
 				<ThemedText style={styles.label}>Amount</ThemedText>
-				<ThemedInput placeholder='0.00' value={amount} onChangeText={setAmount} keyboardType='decimal-pad' icon='hash' editable={!isSaving} />
+				<ThemedInput placeholder='0.00' value={amount} onChangeText={setAmount} keyboardType='decimal-pad' icon='hash' editable={!updateMutation.isPending} />
 			</View>
 
 			{/* Submit Button */}
-			<ThemedButton title='Add to Fund' onPress={handleSave} loading={isSaving} variant='primary' style={styles.submitButton} />
+			<ThemedButton title='Add to Fund' onPress={handleSave} loading={updateMutation.isPending} variant='primary' style={styles.submitButton} />
 
 			{/* Alert Dialog */}
 			<ThemedAlert visible={alertVisible} title={alertContent.title} message={alertContent.message} onDismiss={() => setAlertVisible(false)} />

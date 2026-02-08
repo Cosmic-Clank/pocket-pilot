@@ -1,4 +1,4 @@
-import { StyleSheet, View, Text, TouchableOpacity } from "react-native";
+import { StyleSheet, View, Text, TouchableOpacity, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -7,23 +7,31 @@ interface ProfileHeaderProps {
 	name: string;
 	email: string;
 	avatarInitials?: string;
+	profilePic?: string | null;
 	onChangePhoto?: () => void;
 }
 
-export function ProfileHeader({ name, email, avatarInitials, onChangePhoto }: ProfileHeaderProps) {
+export function ProfileHeader({ name, email, avatarInitials, profilePic, onChangePhoto }: ProfileHeaderProps) {
 	const insets = useSafeAreaInsets();
 	const initials = avatarInitials || deriveInitials(name);
+	const profileImageUri = profilePic ? (profilePic.startsWith("data:") ? profilePic : `data:image/jpeg;base64,${profilePic}`) : undefined;
 
 	return (
 		<LinearGradient colors={["#155DFC", "#432DD7"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.header, { paddingTop: insets.top + 24 }]}>
-			<View style={styles.avatarWrapper}>
-				<View style={styles.avatarCircle}>
-					<Text style={styles.avatarText}>{initials}</Text>
+			<TouchableOpacity onPress={onChangePhoto} activeOpacity={0.7}>
+				<View style={styles.avatarContainer}>
+					<View style={styles.avatarCircle}>
+						{profileImageUri ? (
+							<Image source={{ uri: profileImageUri }} style={styles.profileImage} />
+					) : (
+						<Text style={styles.avatarText}>{initials}</Text>
+					)}
+					</View>
+					<View style={styles.editBadge}>
+						<Feather name="edit-2" size={14} color="#FFFFFF" />
+					</View>
 				</View>
-				<TouchableOpacity style={styles.cameraButton} onPress={onChangePhoto} activeOpacity={0.7}>
-					<Feather name='camera' size={20} color='#155DFC' />
-				</TouchableOpacity>
-			</View>
+			</TouchableOpacity>
 			<Text style={styles.name}>{name}</Text>
 			<Text style={styles.email}>{email}</Text>
 		</LinearGradient>
@@ -46,10 +54,6 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 30,
 		paddingBottom: 80,
 	},
-	avatarWrapper: {
-		position: "relative",
-		marginBottom: 12,
-	},
 	avatarCircle: {
 		width: 120,
 		height: 120,
@@ -62,27 +66,33 @@ const styles = StyleSheet.create({
 		shadowOffset: { width: 0, height: 8 },
 		shadowRadius: 16,
 		elevation: 8,
+		overflow: "hidden",
+	},
+	avatarContainer: {
+		position: "relative",
+	},
+	profileImage: {
+		width: 120,
+		height: 120,
+		borderRadius: 60,
 	},
 	avatarText: {
 		fontSize: 36,
 		fontWeight: "700",
 		color: "#155DFC",
 	},
-	cameraButton: {
+	editBadge: {
 		position: "absolute",
-		bottom: 8,
-		right: 8,
-		width: 44,
-		height: 44,
-		borderRadius: 22,
-		backgroundColor: "#FFFFFF",
+		bottom: 6,
+		right: 6,
+		width: 28,
+		height: 28,
+		borderRadius: 14,
+		backgroundColor: "#155DFC",
 		alignItems: "center",
 		justifyContent: "center",
-		shadowColor: "#000000",
-		shadowOpacity: 0.12,
-		shadowOffset: { width: 0, height: 4 },
-		shadowRadius: 10,
-		elevation: 6,
+		borderWidth: 2,
+		borderColor: "#FFFFFF",
 	},
 	name: {
 		fontSize: 22,

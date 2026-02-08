@@ -8,7 +8,7 @@ import { ThemedDatePicker } from "@/components/themed-date-picker";
 import { MediaPicker } from "@/components/media-picker";
 import { ThemedAlert } from "@/components/themed-alert";
 import { type ImagePickerAsset } from "expo-image-picker";
-import { saveExpense } from "@/services/transaction-service";
+import { useAddTransaction } from "@/hooks/mutations/use-transaction-mutations";
 import { CATEGORIES } from "@/constants/config";
 
 interface ManualEntryFormProps {
@@ -30,9 +30,11 @@ export const ManualEntryForm = ({ initialTitle = "", initialAmount = "", initial
 	const [date, setDate] = useState<Date | null>(initialDate);
 	const [notes, setNotes] = useState(initialNotes);
 	const [receiptAsset, setReceiptAsset] = useState<ImagePickerAsset | null>(initialReceiptAsset);
-	const [isSaving, setIsSaving] = useState(false);
 	const [alertVisible, setAlertVisible] = useState(false);
 	const [alertContent, setAlertContent] = useState<{ title: string; message: string }>({ title: "", message: "" });
+
+	// Use React Query mutation for adding transactions
+	const addTransactionMutation = useAddTransaction();
 
 	const categoryOptions: SelectOption[] = CATEGORIES;
 
@@ -73,42 +75,50 @@ export const ManualEntryForm = ({ initialTitle = "", initialAmount = "", initial
 			return;
 		}
 
-		setIsSaving(true);
-		const result = await saveExpense({
-			title,
-			amount,
-			category,
-			type,
-			date,
-			notes: notes.trim() || undefined,
-			receiptAsset: receiptAsset || undefined,
-		});
+		// Use mutation to save expense
+		addTransactionMutation.mutate(
+			{
+				title,
+				amount,
+				category,
+				type,
+				date,
+				notes: notes.trim() || undefined,
+				receiptAsset: receiptAsset || undefined,
+			},
+			{
+				onSuccess: (result) => {
+					if (result.success) {
+						// Reset form
+						setTitle("");
+						setAmount("");
+						setCategory("");
+						setType("expense");
+						setDate(null);
+						setNotes("");
+						setReceiptAsset(null);
 
-		setIsSaving(false);
-
-		if (result.success) {
-			// Reset form
-			setTitle("");
-			setAmount("");
-			setCategory("");
-			setType("expense");
-			setDate(null);
-			setNotes("");
-			setReceiptAsset(null);
-
-			// setAlertContent({ title: "Success", message: "Expense saved successfully!" });
-			// setAlertVisible(true);
-
-			if (onSuccess) {
-				onSuccess();
+						// Call parent success callback
+						if (onSuccess) {
+							onSuccess();
+						}
+					} else {
+						setAlertContent({
+							title: result.message,
+							message: result.error || "An error occurred while saving the expense.",
+						});
+						setAlertVisible(true);
+					}
+				},
+				onError: (error) => {
+					setAlertContent({
+						title: "Error",
+						message: error instanceof Error ? error.message : "An error occurred while saving the expense.",
+					});
+					setAlertVisible(true);
+				},
 			}
-		} else {
-			setAlertContent({
-				title: result.message,
-				message: result.error || "An error occurred while saving the expense.",
-			});
-			setAlertVisible(true);
-		}
+		);
 	};
 
 	return (
@@ -150,7 +160,14 @@ export const ManualEntryForm = ({ initialTitle = "", initialAmount = "", initial
 			<MediaPicker label='Attach Receipt (Optional)' value={receiptAsset?.fileName ?? receiptAsset?.uri} onSelect={(asset) => setReceiptAsset(asset)} />
 
 			{/* Save Button */}
-			<ThemedButton title='Save Transaction' variant='primary' style={styles.saveButton} onPress={handleSaveExpense} loading={isSaving} disabled={isSaving} />
+			<ThemedButton 
+				title='Save Transaction' 
+				variant='primary' 
+				style={styles.saveButton} 
+				onPress={handleSaveExpense} 
+				loading={addTransactionMutation.isPending} 
+				disabled={addTransactionMutation.isPending} 
+			/>
 			{/* Alert */}
 			<ThemedAlert visible={alertVisible} title={alertContent.title} message={alertContent.message} onDismiss={() => setAlertVisible(false)} />
 		</View>

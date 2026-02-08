@@ -6,40 +6,35 @@ import { BottomSheetModalProvider, BottomSheetModal } from "@gorhom/bottom-sheet
 import { ThemedText } from "@/components/themed-text";
 import { ThemedButton } from "@/components/themed-button";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useState, useCallback, useRef } from "react";
+import { useState, useRef } from "react";
 import { ThemedScrollView } from "@/components/themed-scroll-view";
-import { useFocusEffect } from "@react-navigation/native";
 import { AddBudgetBottomSheet } from "@/components/budget/add-budget-bottom-sheet";
 import { AddEmergencyFundBottomSheet } from "@/components/emergency-fund/add-emergency-fund-bottom-sheet";
-import { fetchProfile, updateEmergencyFundAutoInvest, type ProfileRecord } from "@/services/profile-service";
+import { useUpdateEmergencyFundAutoInvest } from "@/hooks/mutations/use-profile-mutations";
 import { CurrentSavingsCard } from "@/components/savings/current-savings-card";
 import { MonthlyBudgets } from "@/components/savings/monthly-budgets";
 import { EmergencyFundBalanceCard } from "@/components/emergency-fund/emergency-fund-balance-card";
 import { EmergencyFundTransactionBottomSheet } from "@/components/emergency-fund/emergency-fund-transaction-bottom-sheet";
 import { TopPicksSection } from "@/components/ai-record/top-picks";
+import { useProfile } from "@/hooks/queries/use-profile";
+import { useQueryClient } from "@tanstack/react-query";
+import { PROFILE_QUERY_KEY } from "@/hooks/queries/use-profile";
 
 export default function SavingsScreen() {
 	const insets = useSafeAreaInsets();
-	const [autoInvest, setAutoInvest] = useState(false);
-	const [profile, setProfile] = useState<ProfileRecord | null>(null);
-	const [loading, setLoading] = useState(true);
+	const queryClient = useQueryClient();
 	const [transactionType, setTransactionType] = useState<"deposit" | "withdraw">("deposit");
 	const addBudgetModalRef = useRef<BottomSheetModal>(null);
 	const emergencyFundModalRef = useRef<BottomSheetModal>(null);
 	const emergencyFundTransactionModalRef = useRef<BottomSheetModal>(null);
 
-	const loadData = useCallback(async () => {
-		setLoading(true);
+	// Fetch profile using React Query
+	const { data: profile, isLoading: loading } = useProfile();
 
-		// Fetch profile
-		const profileResult = await fetchProfile();
-		if (profileResult.success && profileResult.data) {
-			setProfile(profileResult.data);
-			setAutoInvest(profileResult.data.emergency_fund_auto_invest !== null);
-		}
+	// Use React Query mutation for emergency fund auto-invest
+	const updateAutoInvestMutation = useUpdateEmergencyFundAutoInvest();
 
-		setLoading(false);
-	}, []);
+	const autoInvest = profile?.emergency_fund_auto_invest !== null;
 
 	// Handle emergency fund toggle
 	const handleEmergencyFundToggle = async (value: boolean) => {
@@ -47,12 +42,8 @@ export default function SavingsScreen() {
 			// Open bottom sheet to set amount
 			emergencyFundModalRef.current?.present();
 		} else {
-			// Disable emergency fund
-			setAutoInvest(false);
-			const result = await updateEmergencyFundAutoInvest({ amount: null });
-			if (result.success) {
-				await loadData();
-			}
+			// Disable emergency fund using mutation
+			updateAutoInvestMutation.mutate({ amount: null });
 		}
 	};
 
@@ -65,12 +56,6 @@ export default function SavingsScreen() {
 		setTransactionType("withdraw");
 		emergencyFundTransactionModalRef.current?.present();
 	};
-
-	useFocusEffect(
-		useCallback(() => {
-			loadData();
-		}, [loadData]),
-	);
 
 	return (
 		<GestureHandlerRootView style={styles.gestureContainer}>
@@ -86,7 +71,6 @@ export default function SavingsScreen() {
 					{/* Recent Expenses Header */}
 					<View style={styles.sectionHeader}>
 						<ThemedText style={styles.sectionTitle}>Recent Expenses</ThemedText>
-						<ThemedButton title='+ Add' variant='outline' style={styles.addButton} />
 					</View>
 
 					{/* Current Savings Card */}
@@ -132,8 +116,7 @@ export default function SavingsScreen() {
 					<AddBudgetBottomSheet
 						ref={addBudgetModalRef}
 						onClose={() => {
-							// Refresh budget list when modal closes
-							loadData();
+							// Modal will auto-refresh data via React Query
 							addBudgetModalRef.current?.dismiss();
 						}}
 					/>
@@ -142,12 +125,10 @@ export default function SavingsScreen() {
 					<AddEmergencyFundBottomSheet
 						ref={emergencyFundModalRef}
 						onClose={() => {
-							// Refresh profile when modal closes
-							loadData();
+							// Profile will auto-refresh via React Query
 						}}
 						onSuccess={() => {
-							// Refresh data and close modal
-							loadData();
+							// Close modal - data will auto-refresh
 							emergencyFundModalRef.current?.dismiss();
 						}}
 					/>
@@ -157,13 +138,8 @@ export default function SavingsScreen() {
 						ref={emergencyFundTransactionModalRef}
 						type={transactionType}
 						currentBalance={profile?.emergency_fund_amount || 0}
-						onClose={() => {
-							loadData();
-						}}
-						onSuccess={() => {
-							loadData();
-							emergencyFundTransactionModalRef.current?.dismiss();
-						}}
+						onClose={() => {}}
+						onSuccess={() => {}}
 					/>
 				</ThemedScrollView>
 			</BottomSheetModalProvider>

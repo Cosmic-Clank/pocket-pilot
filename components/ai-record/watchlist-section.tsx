@@ -1,10 +1,13 @@
 import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from "react-native";
-import { useCallback, useState } from "react";
-import { useFocusEffect } from "expo-router";
+import { useEffect, useState, useMemo } from "react";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
-import { fetchWatchlist, removeFromWatchlist, type WatchlistRecord } from "@/services/stock-watchlist-service";
+import { type WatchlistRecord } from "@/services/stock-watchlist-service";
 import { API_CONFIG, getApiUrl } from "@/constants/config";
+import { useWatchlist } from "@/hooks/queries/use-watchlist";
+import { useRemoveFromWatchlist } from "@/hooks/mutations/use-watchlist-mutations";
+import { useQueryClient } from "@tanstack/react-query";
+import { WATCHLIST_QUERY_KEY } from "@/hooks/queries/use-watchlist";
 
 interface StockPriceData {
 	price: number;
@@ -23,54 +26,68 @@ function isHtmlResponse(response: Response, text?: string): boolean {
 }
 
 export function WatchlistSection() {
-	const [loading, setLoading] = useState(true);
-	const [watchlist, setWatchlist] = useState<WatchlistRecord[]>([]);
+	const queryClient = useQueryClient();
 	const [priceData, setPriceData] = useState<Record<string, StockPriceData>>({});
-	const [removingId, setRemovingId] = useState<string | null>(null);
+	const [priceLoading, setPriceLoading] = useState(false);
 
-	const loadWatchlist = useCallback(async () => {
-		setLoading(true);
-		const result = await fetchWatchlist();
+	// Fetch watchlist using React Query
+	const { data: watchlist = [], isLoading: watchlistLoading } = useWatchlist();
+	const removeFromWatchlistMutation = useRemoveFromWatchlist();
 
-		if (result.success && result.data.length > 0) {
-			setWatchlist(result.data);
-			// Fetch price data for all symbols
-			await fetchPriceData(result.data.map((item) => item.symbol));
-		} else {
-			setWatchlist([]);
-			setPriceData({});
-		}
+	// Create stable dependency to avoid infinite loops
+	const watchlistKey = useMemo(
+		() => JSON.stringify(watchlist?.map((w) => w.id) || []),
+		[watchlist]
+	);
 
-		setLoading(false);
-	}, []);
+	// Fetch price data when watchlist changes
+	useEffect(() => {
+		const fetchPriceData = async (symbols: string[]) => {
+			if (!symbols.length) {
+				setPriceData({});
+				return;
+			}
 
-	const fetchPriceData = async (symbols: string[]) => {
-		try {
-			// Call backend API to get real-time stock prices
-			const response = await fetch(`${API_CONFIG.BASE_URL}/api/stock/batch-prices`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ symbols }),
-			});
+			try {
+				setPriceLoading(true);
+				// Call backend API to get real-time stock prices
+				const response = await fetch(`${API_CONFIG.BASE_URL}/api/stock/batch-prices`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ symbols }),
+				});
 
-			if (!response.ok) {
-				const text = await response.text();
-				if (isHtmlResponse(response, text)) {
+				if (!response.ok) {
+					const text = await response.text();
+					if (isHtmlResponse(response, text)) {
+						throw new Error(NETWORK_ERROR_MESSAGE);
+					}
+					throw new Error("Failed to fetch prices");
+				}
+
+				if (isHtmlResponse(response)) {
 					throw new Error(NETWORK_ERROR_MESSAGE);
 				}
-				throw new Error("Failed to fetch prices");
-			}
 
-			if (isHtmlResponse(response)) {
-				throw new Error(NETWORK_ERROR_MESSAGE);
+				const data = (await response.json()) as Record<string, StockPriceData>;
+				setPriceData(data);
+			} catch (error) {
+				console.error("Failed to fetch price data:", error);
+				setPriceData({});
+			} finally {
+				setPriceLoading(false);
 			}
+		};
 
-			const data = (await response.json()) as Record<string, StockPriceData>;
-			setPriceData(data);
-		} catch (error) {
-			console.error("Failed to fetch price data:", error);
+		if (watchlist.length > 0) {
+			fetchPriceData(watchlist.map((item) => item.symbol));
+		} else {
+			setPriceData({});
 		}
-	};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [watchlistKey]);
+
+	const loading = watchlistLoading || priceLoading;
 
 	const handleRemove = async (item: WatchlistRecord) => {
 		Alert.alert("Remove from Watchlist", `Remove ${item.symbol} from your watchlist?`, [
@@ -78,28 +95,16 @@ export function WatchlistSection() {
 			{
 				text: "Remove",
 				style: "destructive",
-				onPress: async () => {
-					setRemovingId(item.id);
-					const result = await removeFromWatchlist(item.id);
-
-					if (result.success) {
-						// Remove from local state
-						setWatchlist((prev) => prev.filter((w) => w.id !== item.id));
-					} else {
-						Alert.alert("Error", result.error || "Failed to remove from watchlist");
-					}
-
-					setRemovingId(null);
+				onPress: () => {
+					removeFromWatchlistMutation.mutate(item.id, {
+						onError: (error) => {
+							Alert.alert("Error", error instanceof Error ? error.message : "Failed to remove from watchlist");
+						},
+					});
 				},
 			},
 		]);
 	};
-
-	useFocusEffect(
-		useCallback(() => {
-			loadWatchlist();
-		}, [loadWatchlist]),
-	);
 
 	if (loading) {
 		return (
@@ -127,7 +132,7 @@ export function WatchlistSection() {
 
 			{watchlist.map((item) => {
 				const prices = priceData[item.symbol];
-				const isRemoving = removingId === item.id;
+
 
 				return (
 					<View key={item.id} style={styles.watchlistCard}>
@@ -159,8 +164,8 @@ export function WatchlistSection() {
 
 						{item.note && <ThemedText style={styles.watchlistNote}>{item.note}</ThemedText>}
 
-						<TouchableOpacity style={styles.removeButton} onPress={() => handleRemove(item)} disabled={isRemoving}>
-							{isRemoving ? (
+					<TouchableOpacity style={styles.removeButton} onPress={() => handleRemove(item)} disabled={removeFromWatchlistMutation.isPending}>
+						{removeFromWatchlistMutation.isPending ? (
 								<ActivityIndicator size='small' color='#EF4444' />
 							) : (
 								<>

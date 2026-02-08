@@ -5,44 +5,46 @@ import { Feather } from "@expo/vector-icons";
 import { Toast } from "toastify-react-native";
 import { ThemedText } from "@/components/themed-text";
 import { supabase } from "@/utils/supabase";
-import { fetchProfile, type ProfileRecord } from "@/services/profile-service";
-import { fetchTransactions, type TransactionRecord } from "@/services/transaction-service";
-import { useFocusEffect } from "@react-navigation/native";
+import { useProfile } from "@/hooks/queries/use-profile";
+import { useTransactions } from "@/hooks/queries/use-transactions";
+import { useAddTransaction } from "@/hooks/mutations/use-transaction-mutations";
+import type { ProfileRecord } from "@/services/profile-service";
+import type { TransactionRecord } from "@/services/transaction-service";
 
 interface SalaryDayCardProps {
 	onSalaryAdded?: () => void;
 }
 
 export const SalaryDayCard: React.FC<SalaryDayCardProps> = ({ onSalaryAdded }) => {
-	const [profile, setProfile] = useState<ProfileRecord | null>(null);
 	const [shouldShow, setShouldShow] = useState(false);
 	const [loading, setLoading] = useState(false);
 
-	const checkSalaryDay = useCallback(async () => {
+	const { data: profile } = useProfile();
+	const { data: transactions = [] } = useTransactions();
+	const addTransaction = useAddTransaction();
+
+	const checkSalaryDay = useCallback(() => {
 		try {
-			// Fetch profile
-			const profileResult = await fetchProfile();
-			if (!profileResult.success || !profileResult.data) {
+			// Check if profile data is available
+			if (!profile) {
+				setShouldShow(false);
 				return;
 			}
 
-			const userProfile = profileResult.data;
-			setProfile(userProfile);
-
 			// Check if monthly income exists
-			if (!userProfile.monthly_income || userProfile.monthly_income <= 0) {
+			if (!profile.monthly_income || profile.monthly_income <= 0) {
 				setShouldShow(false);
 				return;
 			}
 
 			// Check if monthly income date matches today (only compare day of month)
-			if (!userProfile.monthly_income_date) {
+			if (!profile.monthly_income_date) {
 				setShouldShow(false);
 				return;
 			}
 
 			const today = new Date();
-			const [incomeYear, incomeMonth, incomeDay] = userProfile.monthly_income_date.split("-").map((value) => Number(value));
+			const [incomeYear, incomeMonth, incomeDay] = profile.monthly_income_date.split("-").map((value) => Number(value));
 
 			// Compare only the day of month using local date parts to avoid UTC shift
 			const isSalaryDay = today.getDate() === incomeDay && !Number.isNaN(incomeDay) && !Number.isNaN(incomeMonth) && !Number.isNaN(incomeYear);
@@ -53,15 +55,6 @@ export const SalaryDayCard: React.FC<SalaryDayCardProps> = ({ onSalaryAdded }) =
 			}
 
 			// Check if salary has already been added today
-			const txResult = await fetchTransactions();
-			if (!txResult.success || !txResult.data) {
-				setShouldShow(false);
-				return;
-			}
-
-			const transactions = txResult.data as TransactionRecord[];
-
-			// Check if there's already a salary income transaction today
 			const todayStr = today.toISOString().split("T")[0]; // YYYY-MM-DD format
 			const salarySentToday = transactions.some((tx) => {
 				const txDate = tx.transaction_date.split("T")[0]; // Extract date part
@@ -73,17 +66,11 @@ export const SalaryDayCard: React.FC<SalaryDayCardProps> = ({ onSalaryAdded }) =
 			console.error("Error checking salary day:", error);
 			setShouldShow(false);
 		}
-	}, []);
+	}, [profile, transactions]);
 
 	useEffect(() => {
 		checkSalaryDay();
 	}, [checkSalaryDay]);
-
-	useFocusEffect(
-		useCallback(() => {
-			checkSalaryDay();
-		}, [checkSalaryDay]),
-	);
 
 	const handleAddSalary = async () => {
 		if (!profile || !profile.monthly_income) {

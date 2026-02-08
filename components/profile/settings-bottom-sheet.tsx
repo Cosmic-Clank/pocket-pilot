@@ -5,7 +5,8 @@ import { Feather } from "@expo/vector-icons";
 import { BottomSheetDefaultBackdropProps } from "@gorhom/bottom-sheet/lib/typescript/components/bottomSheetBackdrop/types";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedButton } from "@/components/themed-button";
-import { updateProfile, getProfile } from "@/services/profile-service";
+import { useProfile } from "@/hooks/queries/use-profile";
+import { useUpdateProfile } from "@/hooks/mutations/use-profile-mutations";
 import { scheduleWeeklyReport, cancelNotificationByType } from "@/services/notifications-service";
 import { supabase } from "@/utils/supabase";
 import { Toast } from "toastify-react-native";
@@ -19,77 +20,60 @@ export const SettingsBottomSheet = React.forwardRef<BottomSheetModal, SettingsBo
 	const [salaryNotif, setSalaryNotif] = useState(false);
 	const [budgetNotif, setBudgetNotif] = useState(false);
 	const [reportNotif, setReportNotif] = useState(false);
-	const [isLoading, setIsLoading] = useState(true);
 	const [isSaving, setIsSaving] = useState(false);
 	const [hasChanges, setHasChanges] = useState(false);
 
+	const { data: profile, isLoading } = useProfile();
+	const updateProfileMutation = useUpdateProfile();
+
 	useEffect(() => {
-		loadSettings();
-	}, []);
-
-	const loadSettings = async () => {
-		try {
-			setIsLoading(true);
-			const {
-				data: { user },
-			} = await supabase.auth.getUser();
-
-			if (!user) {
-				Toast.error("User not found");
-				return;
-			}
-
-			const profile = await getProfile(user.id);
-			if (profile) {
-				setSalaryNotif(profile.salary_notif ?? false);
-				setBudgetNotif(profile.budget_notif ?? false);
-				setReportNotif(profile.report_notif ?? false);
-				setHasChanges(false);
-			}
-		} catch (error: any) {
-			console.error("Failed to load settings:", error);
-			Toast.error("Failed to load settings");
-		} finally {
-			setIsLoading(false);
+		// Load settings when profile data is available
+		if (profile) {
+			setSalaryNotif(profile.salary_notif ?? false);
+			setBudgetNotif(profile.budget_notif ?? false);
+			setReportNotif(profile.report_notif ?? false);
+			setHasChanges(false);
 		}
-	};
+	}, [profile]);
 
 	const handleSaveChanges = async () => {
 		try {
 			setIsSaving(true);
-			const {
-				data: { user },
-			} = await supabase.auth.getUser();
 
-			if (!user) {
-				Toast.error("User not found");
-				return;
-			}
+			updateProfileMutation.mutate(
+				{
+					salary_notif: salaryNotif,
+					budget_notif: budgetNotif,
+					report_notif: reportNotif,
+				},
+				{
+					onSuccess: async () => {
+						// Handle weekly report notification toggle
+						if (reportNotif) {
+							// Enable weekly report notification
+							const result = await scheduleWeeklyReport();
+							if (!result.success) {
+								console.warn("Failed to schedule weekly report:", result.message);
+							}
+						} else {
+							// Disable weekly report notification
+							await cancelNotificationByType("weekly_report");
+						}
 
-			await updateProfile(user.id, {
-				salary_notif: salaryNotif,
-				budget_notif: budgetNotif,
-				report_notif: reportNotif,
-			});
-
-			// Handle weekly report notification toggle
-			if (reportNotif) {
-				// Enable weekly report notification
-				const result = await scheduleWeeklyReport();
-				if (!result.success) {
-					console.warn("Failed to schedule weekly report:", result.message);
+						Toast.success("Settings saved successfully");
+						setHasChanges(false);
+						setIsSaving(false);
+					},
+					onError: (error: any) => {
+						console.error("Failed to save settings:", error);
+						Toast.error("Failed to save settings");
+						setIsSaving(false);
+					},
 				}
-			} else {
-				// Disable weekly report notification
-				await cancelNotificationByType("weekly_report");
-			}
-
-			Toast.success("Settings saved successfully");
-			setHasChanges(false);
+			);
 		} catch (error: any) {
 			console.error("Failed to save settings:", error);
 			Toast.error("Failed to save settings");
-		} finally {
 			setIsSaving(false);
 		}
 	};

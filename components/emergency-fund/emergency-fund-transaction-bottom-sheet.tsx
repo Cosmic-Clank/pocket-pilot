@@ -7,9 +7,11 @@ import { ThemedInput } from "@/components/themed-input";
 import { ThemedButton } from "@/components/themed-button";
 import { ThemedAlert } from "@/components/themed-alert";
 import { BottomSheetDefaultBackdropProps } from "@gorhom/bottom-sheet/lib/typescript/components/bottomSheetBackdrop/types";
-import { saveExpense, fetchTransactions, calculateTotalBalanceAfterBudget, type TransactionRecord } from "@/services/transaction-service";
-import { updateEmergencyFundAmount } from "@/services/profile-service";
-import { fetchBudgets } from "@/services/budget-service";
+import { useTransactions } from "@/hooks/queries/use-transactions";
+import { useBudgets } from "@/hooks/queries/use-budgets";
+import { useAddTransaction } from "@/hooks/mutations/use-transaction-mutations";
+import { useUpdateEmergencyFundAmount } from "@/hooks/mutations/use-profile-mutations";
+import { calculateTotalBalanceAfterBudget } from "@/services/transaction-service";
 
 interface EmergencyFundTransactionBottomSheetProps {
 	type: "deposit" | "withdraw";
@@ -21,39 +23,38 @@ interface EmergencyFundTransactionBottomSheetProps {
 export const EmergencyFundTransactionBottomSheet = React.forwardRef<BottomSheetModal, EmergencyFundTransactionBottomSheetProps>(({ type, currentBalance, onClose, onSuccess }: EmergencyFundTransactionBottomSheetProps, ref) => {
 	const snapPoints = useMemo(() => [400, "55%"], []);
 	const [amount, setAmount] = useState("");
-	const [isSaving, setIsSaving] = useState(false);
 	const [alertVisible, setAlertVisible] = useState(false);
 	const [alertContent, setAlertContent] = useState<{ title: string; message: string }>({ title: "", message: "" });
 	const [maxAmount, setMaxAmount] = useState(0);
 
+	const { data: transactions = [] } = useTransactions();
+	const { data: budgets = [] } = useBudgets();
+
+	// Use React Query mutations
+	const addTransactionMutation = useAddTransaction();
+	const updateFundMutation = useUpdateEmergencyFundAmount();
+
+	const isSaving = addTransactionMutation.isPending || updateFundMutation.isPending;
+
 	useEffect(() => {
 		if (type === "deposit") {
 			// Calculate available funds for deposit
-			const calculateAvailableFunds = async () => {
-				const [txResult, budgetResult] = await Promise.all([fetchTransactions(), fetchBudgets()]);
+			const balanceData = calculateTotalBalanceAfterBudget(transactions, budgets);
 
-				const transactions = (txResult.success ? txResult.data : []) as TransactionRecord[];
-				const budgets = budgetResult.success ? budgetResult.data : [];
+			if (balanceData.balanceAfterBudget <= 0) {
+				// Can't deposit if no positive balance after budgets
+				setMaxAmount(0);
+				return;
+			}
 
-				// Calculate total balance after accounting for budgets
-				const balanceData = calculateTotalBalanceAfterBudget(transactions, budgets);
-
-				if (balanceData.balanceAfterBudget <= 0) {
-					// Can't deposit if no positive balance after budgets
-					setMaxAmount(0);
-					return;
-				}
-
-				// Available = balance after budgets - current emergency fund balance
-				const available = Math.max(0, balanceData.balanceAfterBudget - currentBalance);
-				setMaxAmount(available);
-			};
-			calculateAvailableFunds();
+			// Available = balance after budgets - current emergency fund balance
+			const available = Math.max(0, balanceData.balanceAfterBudget - currentBalance);
+			setMaxAmount(available);
 		} else {
 			// For withdraw, max is current balance
 			setMaxAmount(currentBalance);
 		}
-	}, [type, currentBalance]);
+	}, [type, currentBalance, transactions, budgets]);
 
 	const handleSheetChanges = useCallback((index: number) => {
 		// console.log("handleSheetChanges", index);
@@ -100,53 +101,70 @@ export const EmergencyFundTransactionBottomSheet = React.forwardRef<BottomSheetM
 			return;
 		}
 
-		setIsSaving(true);
+		// Calculate new balance
+		const newBalance = type === "deposit" ? currentBalance + parsedAmount : currentBalance - parsedAmount;
 
-		try {
-			// Calculate new balance
-			const newBalance = type === "deposit" ? currentBalance + parsedAmount : currentBalance - parsedAmount;
-
-			// Validate new balance is not negative
-			if (newBalance < 0) {
-				throw new Error("New balance cannot be negative");
-			}
-
-			// Update emergency fund amount
-			const updateResult = await updateEmergencyFundAmount({ amount: newBalance });
-
-			if (!updateResult.success) {
-				throw new Error(updateResult.error || "Failed to update emergency fund");
-			}
-
-			// Create transaction record
-			const transactionResult = await saveExpense({
-				title: type === "deposit" ? "Emergency Fund Deposit" : "Emergency Fund Withdrawal",
-				amount: parsedAmount.toString(),
-				category: "other",
-				type: type === "deposit" ? "expense" : "income",
-				date: new Date(),
-				notes: `${type === "deposit" ? "Deposited to" : "Withdrawn from"} emergency fund`,
-			});
-
-			if (!transactionResult.success) {
-				console.warn("Transaction record failed but fund updated:", transactionResult.error);
-			}
-
-			// Reset form
-			setAmount("");
-
-			// Notify parent component
-			onSuccess?.();
-		} catch (error) {
-			console.error("Emergency fund transaction error:", error);
+		// Validate new balance is not negative
+		if (newBalance < 0) {
 			setAlertContent({
 				title: "Error",
-				message: error instanceof Error ? error.message : "An error occurred",
+				message: "New balance cannot be negative",
 			});
 			setAlertVisible(true);
-		} finally {
-			setIsSaving(false);
+			return;
 		}
+
+		// First update the emergency fund amount
+		updateFundMutation.mutate(
+			{ amount: newBalance },
+			{
+				onSuccess: (updateResult) => {
+					if (updateResult.success) {
+						// Then create transaction record
+						addTransactionMutation.mutate(
+							{
+								title: type === "deposit" ? "Emergency Fund Deposit" : "Emergency Fund Withdrawal",
+								amount: parsedAmount.toString(),
+								category: "other",
+								type: type === "deposit" ? "expense" : "income",
+								date: new Date(),
+								notes: `${type === "deposit" ? "Deposited to" : "Withdrawn from"} emergency fund`,
+							},
+							{
+								onSuccess: (transactionResult) => {
+									if (!transactionResult.success) {
+										console.warn("Transaction record failed but fund updated:", transactionResult.error);
+									}
+									// Reset form
+									setAmount("");
+									// Notify parent component
+									onSuccess?.();
+								},
+								onError: (error) => {
+									console.warn("Transaction record failed but fund updated:", error);
+									// Still count as success since fund was updated
+									setAmount("");
+									onSuccess?.();
+								},
+							}
+						);
+					} else {
+						setAlertContent({
+							title: "Error",
+							message: updateResult.error || "Failed to update emergency fund",
+						});
+						setAlertVisible(true);
+					}
+				},
+				onError: (error) => {
+					setAlertContent({
+						title: "Error",
+						message: error instanceof Error ? error.message : "An error occurred",
+					});
+					setAlertVisible(true);
+				},
+			}
+		);
 	};
 
 	return (

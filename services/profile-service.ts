@@ -13,6 +13,7 @@ export interface ProfileRecord {
 	budget_notif: boolean;
 	report_notif: boolean;
 	monthly_saving_goal: number | null;
+	profile_pic: string | null;
 	created_at?: string;
 }
 
@@ -32,6 +33,7 @@ export interface UpdateProfileParams {
 	budget_notif?: boolean;
 	report_notif?: boolean;
 	monthly_saving_goal?: number | null;
+	profile_pic?: string | null;
 }
 
 export interface UpdateProfileResult {
@@ -293,3 +295,112 @@ export async function updateEmergencyFundAmount(params: UpdateEmergencyFundAmoun
 		};
 	}
 }
+
+export interface UpdateProfilePictureParams {
+	base64: string;
+	mimeType?: string;
+}
+
+export interface UpdateProfilePictureResult {
+	success: boolean;
+	message: string;
+	data?: ProfileRecord;
+	error?: string;
+}
+
+/**
+ * Update user's profile picture with base64 image data
+ */
+export async function updateProfilePicture(params: UpdateProfilePictureParams): Promise<UpdateProfilePictureResult> {
+	try {
+		// Get current user
+		const { data: authData, error: authError } = await supabase.auth.getUser();
+
+		if (authError || !authData?.user?.id) {
+			return {
+				success: false,
+				message: "User not authenticated",
+				error: "Please log in to update profile picture",
+			};
+		}
+
+		// Update profile with base64 image
+		const { data, error } = await supabase
+			.from("profiles")
+			.update({ profile_pic: params.base64 })
+			.eq("id", authData.user.id)
+			.select()
+			.single();
+
+		if (error) {
+			console.error("Update profile picture error:", error);
+			return {
+				success: false,
+				message: "Failed to update profile picture",
+				error: error.message,
+			};
+		}
+
+		return {
+			success: true,
+			message: "Profile picture updated successfully",
+			data: data as ProfileRecord,
+		};
+	} catch (error: any) {
+		console.error("Update profile picture unexpected error:", error);
+		return {
+			success: false,
+			message: "An error occurred",
+			error: error.message || "Failed to update profile picture",
+		};
+	}
+}
+
+/**
+ * Delete user's profile picture
+ */
+export async function deleteProfilePicture(): Promise<UpdateProfilePictureResult> {
+	try {
+		// Get current user
+		const { data: authData, error: authError } = await supabase.auth.getUser();
+
+		if (authError || !authData?.user?.id) {
+			return {
+				success: false,
+				message: "User not authenticated",
+				error: "Please log in to delete profile picture",
+			};
+		}
+
+		// Update profile with null picture
+		const { data, error } = await supabase
+			.from("profiles")
+			.update({ profile_pic: null })
+			.eq("id", authData.user.id)
+			.select()
+			.single();
+
+		if (error) {
+			console.error("Delete profile picture error:", error);
+			return {
+				success: false,
+				message: "Failed to delete profile picture",
+				error: error.message,
+			};
+		}
+
+		return {
+			success: true,
+			message: "Profile picture deleted successfully",
+			data: data as ProfileRecord,
+		};
+	} catch (error: any) {
+		console.error("Delete profile picture unexpected error:", error);
+		return {
+			success: false,
+			message: "An error occurred",
+			error: error.message || "Failed to delete profile picture",
+		};
+	}
+}
+

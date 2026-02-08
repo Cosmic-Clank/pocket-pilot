@@ -2,11 +2,11 @@ import { View, StyleSheet, ActivityIndicator } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedButton } from "@/components/themed-button";
-import { fetchBudgets, type BudgetRecord } from "@/services/budget-service";
-import { fetchTransactions, type TransactionRecord } from "@/services/transaction-service";
+import { type BudgetRecord } from "@/services/budget-service";
+import { type TransactionRecord } from "@/services/transaction-service";
 import { CATEGORY_ICON_MAP } from "@/constants/config";
-import { useState, useCallback } from "react";
-import { useFocusEffect } from "@react-navigation/native";
+import { useTransactions } from "@/hooks/queries/use-transactions";
+import { useBudgets } from "@/hooks/queries/use-budgets";
 
 interface MonthlyBudgetsProps {
 	onAddBudgetPress: () => void;
@@ -15,33 +15,11 @@ interface MonthlyBudgetsProps {
 }
 
 export function MonthlyBudgets({ onAddBudgetPress, showHeader = true, limit }: MonthlyBudgetsProps) {
-	const [budgets, setBudgets] = useState<BudgetRecord[]>([]);
-	const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
-	const [loading, setLoading] = useState(true);
+	// Fetch data using React Query
+	const { data: transactions = [], isLoading: txLoading } = useTransactions();
+	const { data: budgets = [], isLoading: budgetsLoading } = useBudgets();
 
-	const loadBudgetData = useCallback(async () => {
-		setLoading(true);
-
-		// Fetch transactions for calculating spent amounts
-		const transactionsResult = await fetchTransactions();
-		if (transactionsResult.success) {
-			setTransactions(transactionsResult.data);
-		}
-
-		// Fetch budgets
-		const budgetsResult = await fetchBudgets();
-		if (budgetsResult.success) {
-			setBudgets(budgetsResult.data);
-		}
-
-		setLoading(false);
-	}, []);
-
-	useFocusEffect(
-		useCallback(() => {
-			loadBudgetData();
-		}, [loadBudgetData]),
-	);
+	const loading = txLoading || budgetsLoading;
 	// Helper function to calculate spent amount for a budget category in current month
 	const getSpentAmount = (category: string): number => {
 		const now = new Date();

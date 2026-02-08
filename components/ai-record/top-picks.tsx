@@ -1,107 +1,30 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedButton } from "@/components/themed-button";
 import { ThemedAlert } from "@/components/themed-alert";
-import { API_CONFIG, getApiUrl } from "@/constants/config";
-import { calculateCurrentMonthBalanceAfterBudget, fetchTransactions } from "@/services/transaction-service";
-import { fetchBudgets } from "@/services/budget-service";
-import { executeTrade } from "@/services/stock-trade-service";
-import { addToWatchlist, isInWatchlist } from "@/services/stock-watchlist-service";
-import { useFocusEffect } from "expo-router";
-
-type TopPick = {
-	id: string;
-	symbol: string;
-	company: string;
-	price: string;
-	changePct: string;
-	changeColor: string;
-	badge: string;
-	badgeColor: string;
-	aiScore: string;
-	thirtyDay: string;
-	sevenDay: string;
-	why: string;
-	suggestedInvestment: string;
-	sharesToBuy: string;
-};
-
-type TopPicksApiResponse = {
-	picks?: TopPick[];
-	data?: TopPick[];
-};
+import { isInWatchlist } from "@/services/stock-watchlist-service";
+import { useTransactions } from "@/hooks/queries/use-transactions";
+import { useBudgets } from "@/hooks/queries/use-budgets";
+import { useTopPicks } from "@/hooks/queries/use-top-picks";
+import { useExecuteTrade } from "@/hooks/mutations/use-stock-trade-mutations";
+import { useAddToWatchlist } from "@/hooks/mutations/use-watchlist-mutations";
+import type { TopPick } from "@/hooks/queries/use-top-picks";
 
 export function TopPicksSection() {
-	const [loading, setLoading] = useState(true);
-	const [picks, setPicks] = useState<TopPick[]>([]);
-	const [error, setError] = useState<string | null>(null);
+	// Fetch transactions and budgets first
+	const { data: transactions = [], isLoading: txLoading } = useTransactions();
+	const { data: budgets = [], isLoading: budgetsLoading } = useBudgets();
 
-	useFocusEffect(
-		useCallback(() => {
-			let isMounted = true;
+	// Fetch top picks (depends on transactions and budgets - this is the HEAVY endpoint!)
+	const {
+		data: picks = [],
+		isLoading: picksLoading,
+		error,
+	} = useTopPicks(transactions, budgets, transactions.length > 0 && budgets.length >= 0);
 
-			const loadTopPicks = async () => {
-				try {
-					setLoading(true);
-					setError(null);
-
-					// Pull the latest financial context from Supabase before requesting picks
-					const [txResult, budgetResult] = await Promise.all([fetchTransactions(), fetchBudgets()]);
-
-					if (!txResult.success || !budgetResult.success) {
-						const firstError = txResult.error || budgetResult.error || "Failed to load financial data";
-						throw new Error(firstError);
-					}
-
-					const monthlyBalance = calculateCurrentMonthBalanceAfterBudget(txResult.data, budgetResult.data);
-					console.log("Monthly balance after budget:", monthlyBalance);
-
-					const payload = {
-						monthly_balance_after_budget: monthlyBalance.balanceAfterBudget,
-					};
-
-					const response = await fetch(getApiUrl(API_CONFIG.ENDPOINTS.TOP_PICKS), {
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-						},
-						body: JSON.stringify(payload),
-					});
-
-					if (!response.ok) {
-						const errorText = await response.text();
-						throw new Error(errorText || "Top picks request failed");
-					}
-
-					const body = (await response.json()) as TopPicksApiResponse;
-					const apiPicks = body.picks ?? body.data ?? [];
-
-					if (isMounted) {
-						setPicks(apiPicks);
-					}
-				} catch (err) {
-					console.error("Top picks fetch failed:", err);
-					if (isMounted) {
-						const message = err instanceof Error ? err.message : "Failed to load recommendations";
-						setError(message);
-						setPicks([]);
-					}
-				} finally {
-					if (isMounted) {
-						setLoading(false);
-					}
-				}
-			};
-
-			loadTopPicks();
-
-			return () => {
-				isMounted = false;
-			};
-		}, []),
-	);
+	const loading = txLoading || budgetsLoading || picksLoading;
 
 	return (
 		<View>
@@ -112,7 +35,7 @@ export function TopPicksSection() {
 
 			{error ? (
 				<View style={styles.errorBox}>
-					<ThemedText style={styles.errorText}>{"Network Error, please try again later."}</ThemedText>
+					<ThemedText style={styles.errorText}>Network Error, please try again later.</ThemedText>
 				</View>
 			) : null}
 
@@ -132,11 +55,13 @@ type StockCardProps = {
 };
 
 function StockCard({ pick }: StockCardProps) {
-	const [investing, setInvesting] = useState(false);
-	const [addingToWatchlist, setAddingToWatchlist] = useState(false);
 	const [inWatchlist, setInWatchlist] = useState(false);
 	const [alertVisible, setAlertVisible] = useState(false);
 	const [alertContent, setAlertContent] = useState<{ title: string; message: string }>({ title: "", message: "" });
+
+	// Use mutation hooks
+	const executeTradeMutation = useExecuteTrade();
+	const addToWatchlistMutation = useAddToWatchlist();
 
 	// Check if already in watchlist on mount
 	useEffect(() => {
@@ -148,19 +73,26 @@ function StockCard({ pick }: StockCardProps) {
 	}, [pick.symbol]);
 
 	const handleInvest = async () => {
-		try {
-			setInvesting(true);
+		// Extract numbers from formatted strings (remove all non-numeric except decimal points)
+		const amountStr = pick.suggestedInvestment?.toString().replace(/[^\d.]/g, "").trim();
+		const priceStr = pick.price?.toString().replace(/[^\d.]/g, "").trim();
+		const sharesStr = pick.sharesToBuy?.toString().split(/\s+/)[0].replace(/[^\d.]/g, "").trim();
 
-			// Parse values from string formats
-			const amount = parseFloat(pick.suggestedInvestment.replace(/[$,]/g, ""));
-			const price = parseFloat(pick.price.replace(/[$,]/g, ""));
-			const shares = parseFloat(pick.sharesToBuy.split(" ")[0]);
+		const amount = amountStr ? parseFloat(amountStr) : NaN;
+		const price = priceStr ? parseFloat(priceStr) : NaN;
+		const shares = sharesStr ? parseFloat(sharesStr) : NaN;
 
-			if (isNaN(amount) || isNaN(price) || isNaN(shares)) {
-				throw new Error("Invalid investment data");
-			}
+		if (isNaN(amount) || isNaN(price) || isNaN(shares)) {
+			setAlertContent({
+				title: "Error",
+				message: `Invalid investment data\n\nAmount: ${pick.suggestedInvestment}\nPrice: ${pick.price}\nShares: ${pick.sharesToBuy}`,
+			});
+			setAlertVisible(true);
+			return;
+		}
 
-			const result = await executeTrade({
+		executeTradeMutation.mutate(
+			{
 				symbol: pick.symbol,
 				side: "buy",
 				amount,
@@ -168,66 +100,52 @@ function StockCard({ pick }: StockCardProps) {
 				shares,
 				source: "ai-recommendation",
 				note: `AI-recommended investment: ${pick.why}`,
-			});
-
-			if (result.success) {
-				setAlertContent({
-					title: "Investment Successful",
-					message: result.message,
-				});
-			} else {
-				setAlertContent({
-					title: "Investment Failed",
-					message: result.error || result.message,
-				});
-			}
-			setAlertVisible(true);
-		} catch (error) {
-			console.error("Investment error:", error);
-			setAlertContent({
-				title: "Error",
-				message: error instanceof Error ? error.message : "Failed to process investment",
-			});
-			setAlertVisible(true);
-		} finally {
-			setInvesting(false);
-		}
+			},
+			{
+				onSuccess: (result) => {
+					setAlertContent({
+						title: "Investment Successful",
+						message: result.message,
+					});
+					setAlertVisible(true);
+				},
+				onError: (error) => {
+					setAlertContent({
+						title: "Investment Failed",
+						message: error instanceof Error ? error.message : "Failed to process investment",
+					});
+					setAlertVisible(true);
+				},
+			},
+		);
 	};
 
 	const handleAddToWatchlist = async () => {
-		try {
-			setAddingToWatchlist(true);
-
-			const result = await addToWatchlist({
+		addToWatchlistMutation.mutate(
+			{
 				symbol: pick.symbol,
 				company: pick.company,
 				note: `AI Score: ${pick.aiScore} - ${pick.badge}`,
 				addedFrom: "ai-recommendation",
-			});
-
-			if (result.success) {
-				setInWatchlist(true);
-				setAlertContent({
-					title: "Added to Watchlist",
-					message: `${pick.symbol} has been added to your watchlist`,
-				});
-			} else {
-				setAlertContent({
-					title: "Failed",
-					message: result.error || result.message,
-				});
-			}
-			setAlertVisible(true);
-		} catch (error) {
-			console.error("Add to watchlist error:", error);
-			setAlertContent({
-				title: "Error",
-				message: error instanceof Error ? error.message : "Failed to add to watchlist",
-			});
-			setAlertVisible(true);
-		} finally {
-			setAddingToWatchlist(false);
-		}
+			},
+			{
+				onSuccess: () => {
+					setInWatchlist(true);
+					setAlertContent({
+						title: "Added to Watchlist",
+						message: `${pick.symbol} has been added to your watchlist`,
+					});
+					setAlertVisible(true);
+				},
+				onError: (error) => {
+					setAlertContent({
+						title: "Failed",
+						message: error instanceof Error ? error.message : "Failed to add to watchlist",
+					});
+					setAlertVisible(true);
+				},
+			},
+		);
 	};
 
 	return (
@@ -287,8 +205,8 @@ function StockCard({ pick }: StockCardProps) {
 				</View>
 			</View>
 
-			<ThemedButton title={`AED Invest ${pick.suggestedInvestment}`} variant='primary' style={styles.investButton} onPress={handleInvest} loading={investing} disabled={investing} />
-			<ThemedButton title={inWatchlist ? "✓ Added to Watchlist" : "Add to Watchlist"} variant='outline' style={[styles.watchlistButton, inWatchlist && styles.watchlistButtonAdded]} onPress={handleAddToWatchlist} loading={addingToWatchlist} disabled={addingToWatchlist || inWatchlist} />
+			<ThemedButton title={`Invest ${pick.suggestedInvestment}`} variant='primary' style={styles.investButton} onPress={handleInvest} loading={executeTradeMutation.isPending} disabled={executeTradeMutation.isPending} />
+			<ThemedButton title={inWatchlist ? "✓ Added to Watchlist" : "Add to Watchlist"} variant='outline' style={[styles.watchlistButton, inWatchlist && styles.watchlistButtonAdded]} onPress={handleAddToWatchlist} loading={addToWatchlistMutation.isPending} disabled={addToWatchlistMutation.isPending || inWatchlist} />
 
 			<ThemedAlert visible={alertVisible} title={alertContent.title} message={alertContent.message} onDismiss={() => setAlertVisible(false)} />
 		</View>

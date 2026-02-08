@@ -1,9 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
-import { useFocusEffect } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
-import { fetchStockTrades } from "@/services/stock-trade-service";
+import { useStockTrades } from "@/hooks/queries/use-stock-trades";
 import { API_CONFIG } from "@/constants/config";
 
 interface PriceResponseItem {
@@ -33,118 +32,131 @@ function isHtmlResponse(response: Response, text?: string): boolean {
 }
 
 export function PortfolioSection() {
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState<string | null>(null);
 	const [holdings, setHoldings] = useState<HoldingRow[]>([]);
 	const [totals, setTotals] = useState({ value: 0, cost: 0, pnl: 0, pnlPercent: 0 });
+	const [error, setError] = useState<string | null>(null);
+	const [priceLoading, setPriceLoading] = useState(false);
 
-	const loadPortfolio = useCallback(async () => {
-		try {
-			setLoading(true);
-			setError(null);
+	// Fetch stock trades using React Query
+	const { data: trades = [], isLoading: tradesLoading } = useStockTrades();
 
-			const tradesRes = await fetchStockTrades();
-			if (!tradesRes.success) {
-				throw new Error(tradesRes.error || "Failed to load trades");
-			}
+	// Create stable dependency to avoid infinite loops
+	const tradesKey = useMemo(
+		() => JSON.stringify(trades?.map((t) => ({ id: t.id, shares: t.shares, side: t.side })) || []),
+		[trades]
+	);
 
-			const trades = tradesRes.data || [];
-			if (!trades.length) {
-				setHoldings([]);
-				setTotals({ value: 0, cost: 0, pnl: 0, pnlPercent: 0 });
-				return;
-			}
+	// Process trades and fetch prices when trades change
+	useEffect(() => {
+		const processPortfolio = async () => {
+			try {
+				setError(null);
 
-			const symbolMap: Record<string, { shares: number; cost: number }> = {};
-			for (const t of trades) {
-				const symbol = t.symbol?.toUpperCase?.() || "";
-				if (!symbol) continue;
-				if (!symbolMap[symbol]) {
-					symbolMap[symbol] = { shares: 0, cost: 0 };
+				if (!trades.length) {
+					setHoldings([]);
+					setTotals({ value: 0, cost: 0, pnl: 0, pnlPercent: 0 });
+					return;
 				}
 
-				if (t.side === "buy") {
-					symbolMap[symbol].shares += t.shares || 0;
-					symbolMap[symbol].cost += t.amount || 0;
-				} else if (t.side === "sell") {
-					symbolMap[symbol].shares -= t.shares || 0;
-					symbolMap[symbol].cost -= t.amount || 0;
+				const symbolMap: Record<string, { shares: number; cost: number }> = {};
+				for (const t of trades) {
+					const symbol = t.symbol?.toUpperCase?.() || "";
+					if (!symbol) continue;
+					if (!symbolMap[symbol]) {
+						symbolMap[symbol] = { shares: 0, cost: 0 };
+					}
+
+					if (t.side === "buy") {
+						symbolMap[symbol].shares += t.shares || 0;
+						symbolMap[symbol].cost += t.amount || 0;
+					} else if (t.side === "sell") {
+						symbolMap[symbol].shares -= t.shares || 0;
+						symbolMap[symbol].cost -= t.amount || 0;
+					}
 				}
-			}
 
-			const symbols = Object.keys(symbolMap).filter((s) => symbolMap[s].shares > 0);
-			if (!symbols.length) {
-				setHoldings([]);
-				setTotals({ value: 0, cost: 0, pnl: 0, pnlPercent: 0 });
-				return;
-			}
+				const symbols = Object.keys(symbolMap).filter((s) => symbolMap[s].shares > 0);
+				if (!symbols.length) {
+					setHoldings([]);
+					setTotals({ value: 0, cost: 0, pnl: 0, pnlPercent: 0 });
+					return;
+				}
 
-			const priceRes = await fetch(`${API_CONFIG.BASE_URL}/api/stock/batch-prices`, {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ symbols }),
-			});
+				setPriceLoading(true);
+				const priceRes = await fetch(`${API_CONFIG.BASE_URL}/api/stock/batch-prices`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ symbols }),
+				});
 
-			if (!priceRes.ok) {
-				const text = await priceRes.text();
-				if (isHtmlResponse(priceRes, text)) {
+				if (!priceRes.ok) {
+					const text = await priceRes.text();
+					if (isHtmlResponse(priceRes, text)) {
+						throw new Error(NETWORK_ERROR_MESSAGE);
+					}
+					throw new Error("Failed to fetch prices");
+				}
+
+				if (isHtmlResponse(priceRes)) {
 					throw new Error(NETWORK_ERROR_MESSAGE);
 				}
-				throw new Error("Failed to fetch prices");
+
+				const priceData = (await priceRes.json()) as Record<string, PriceResponseItem>;
+
+				const rows: HoldingRow[] = symbols.map((symbol) => {
+					const { shares, cost } = symbolMap[symbol];
+					const price = priceData?.[symbol]?.price ?? 0;
+					
+					// Validate price data is available
+					if (!priceData?.[symbol] || price <= 0) {
+						console.warn(`Missing or invalid price for ${symbol}: ${price}`);
+					}
+					
+					const currentValue = shares * price;
+					const pnl = currentValue - cost;
+					const pnlPercent = cost > 0 ? (pnl / cost) * 100 : 0;
+					
+					// console.log(`${symbol}: ${shares} shares @ ${price}/share = ${currentValue} current, ${cost} cost = ${pnl} PnL`);
+
+					return {
+						symbol,
+						shares,
+						costBasis: cost,
+						currentPrice: price,
+						currentValue,
+						pnl,
+						pnlPercent,
+					};
+				});
+
+				const totalsNext = rows.reduce(
+					(acc, row) => {
+						acc.value += row.currentValue;
+						acc.cost += row.costBasis;
+						acc.pnl += row.pnl;
+						return acc;
+					},
+					{ value: 0, cost: 0, pnl: 0, pnlPercent: 0 },
+				);
+				totalsNext.pnlPercent = totalsNext.cost > 0 ? (totalsNext.pnl / totalsNext.cost) * 100 : 0;
+
+				setHoldings(rows.sort((a, b) => b.currentValue - a.currentValue));
+				setTotals(totalsNext);
+			} catch (err) {
+				console.error("Portfolio load error:", err);
+				setError(err instanceof Error ? err.message : "Failed to load portfolio");
+				setHoldings([]);
+				setTotals({ value: 0, cost: 0, pnl: 0, pnlPercent: 0 });
+			} finally {
+				setPriceLoading(false);
 			}
+		};
 
-			if (isHtmlResponse(priceRes)) {
-				throw new Error(NETWORK_ERROR_MESSAGE);
-			}
+		processPortfolio();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [tradesKey]);
 
-			const priceData = (await priceRes.json()) as Record<string, PriceResponseItem>;
-
-			const rows: HoldingRow[] = symbols.map((symbol) => {
-				const { shares, cost } = symbolMap[symbol];
-				const price = priceData?.[symbol]?.price ?? 0;
-				const currentValue = shares * price;
-				const pnl = currentValue - cost;
-				const pnlPercent = cost > 0 ? (pnl / cost) * 100 : 0;
-
-				return {
-					symbol,
-					shares,
-					costBasis: cost,
-					currentPrice: price,
-					currentValue,
-					pnl,
-					pnlPercent,
-				};
-			});
-
-			const totalsNext = rows.reduce(
-				(acc, row) => {
-					acc.value += row.currentValue;
-					acc.cost += row.costBasis;
-					acc.pnl += row.pnl;
-					return acc;
-				},
-				{ value: 0, cost: 0, pnl: 0, pnlPercent: 0 },
-			);
-			totalsNext.pnlPercent = totalsNext.cost > 0 ? (totalsNext.pnl / totalsNext.cost) * 100 : 0;
-
-			setHoldings(rows.sort((a, b) => b.currentValue - a.currentValue));
-			setTotals(totalsNext);
-		} catch (err) {
-			console.error("Portfolio load error:", err);
-			setError(err instanceof Error ? err.message : "Failed to load portfolio");
-			setHoldings([]);
-			setTotals({ value: 0, cost: 0, pnl: 0, pnlPercent: 0 });
-		} finally {
-			setLoading(false);
-		}
-	}, []);
-
-	useFocusEffect(
-		useCallback(() => {
-			loadPortfolio();
-		}, [loadPortfolio]),
-	);
+	const loading = tradesLoading || priceLoading;
 
 	const insight = useMemo(() => {
 		if (!holdings.length) return "No active positions yet. Start with small buys to build your portfolio.";
@@ -199,12 +211,12 @@ export function PortfolioSection() {
 			<View style={styles.statRow}>
 				<View style={styles.statBox}>
 					<ThemedText style={styles.statLabel}>Total Value</ThemedText>
-					<ThemedText style={styles.statValue}>${totals.value.toFixed(0)}</ThemedText>
+					<ThemedText style={styles.statValue}>AED {totals.value.toFixed(0)}</ThemedText>
 				</View>
 				<View style={styles.statBox}>
 					<ThemedText style={styles.statLabel}>P/L</ThemedText>
 					<ThemedText style={[styles.statValue, { color: totals.pnl >= 0 ? "#10B981" : "#EF4444" }]}>
-						{totals.pnl >= 0 ? "+" : ""}${totals.pnl.toFixed(0)}
+						{totals.pnl >= 0 ? "+" : ""}AED {totals.pnl.toFixed(0)}
 					</ThemedText>
 				</View>
 			</View>
@@ -216,7 +228,7 @@ export function PortfolioSection() {
 						<ThemedText style={styles.holdingShares}>{h.shares.toFixed(2)} shares</ThemedText>
 					</View>
 					<View style={styles.holdingRight}>
-						<ThemedText style={styles.holdingValue}>${h.currentValue.toFixed(0)}</ThemedText>
+						<ThemedText style={styles.holdingValue}>AED {h.currentValue.toFixed(0)}</ThemedText>
 						<View style={styles.holdingPnlRow}>
 							<Feather name={h.pnl >= 0 ? "trending-up" : "trending-down"} size={12} color={h.pnl >= 0 ? "#10B981" : "#EF4444"} />
 							<ThemedText style={[styles.holdingPnl, { color: h.pnl >= 0 ? "#10B981" : "#EF4444" }]}>

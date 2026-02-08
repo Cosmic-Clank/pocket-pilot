@@ -8,7 +8,9 @@ import { ThemedInput } from "@/components/themed-input";
 import { ThemedButton } from "@/components/themed-button";
 import { ThemedAlert } from "@/components/themed-alert";
 import { ThemedDatePicker } from "@/components/themed-date-picker";
-import { fetchProfile, updateProfile, type ProfileRecord } from "@/services/profile-service";
+import { useProfile } from "@/hooks/queries/use-profile";
+import { useUpdateProfile } from "@/hooks/mutations/use-profile-mutations";
+import type { ProfileRecord } from "@/services/profile-service";
 import { scheduleSalaryReminder } from "@/services/notifications-service";
 import { supabase } from "@/utils/supabase";
 
@@ -19,9 +21,7 @@ interface EditProfileBottomSheetProps {
 
 export const EditProfileBottomSheet = React.forwardRef<BottomSheetModal, EditProfileBottomSheetProps>(({ onClose, onSuccess }, ref) => {
 	const snapPoints = useMemo(() => [640, "85%"], []);
-	const [loading, setLoading] = useState(false);
 	const [saving, setSaving] = useState(false);
-	const [profile, setProfile] = useState<ProfileRecord | null>(null);
 	const [displayName, setDisplayName] = useState("");
 	const [email, setEmail] = useState("");
 	const [phoneNumber, setPhoneNumber] = useState("");
@@ -33,39 +33,32 @@ export const EditProfileBottomSheet = React.forwardRef<BottomSheetModal, EditPro
 	const [alertMessage, setAlertMessage] = useState("");
 	const [alertVariant, setAlertVariant] = useState<"confirm" | "alert">("alert");
 
-	const loadProfile = useCallback(async () => {
-		try {
-			setLoading(true);
+	const { data: profile, isLoading: loading } = useProfile();
+	const updateProfileMutation = useUpdateProfile();
 
-			// Fetch profile data
-			const profileResult = await fetchProfile();
-			if (profileResult.success && profileResult.data) {
-				setProfile(profileResult.data);
-				setDisplayName(profileResult.data.display_name || "");
-				setPhoneNumber(profileResult.data.phone_number || "");
-				setMonthlyIncome(profileResult.data.monthly_income ? profileResult.data.monthly_income.toString() : "");
-				setMonthlySavingGoal(profileResult.data.monthly_saving_goal ? profileResult.data.monthly_saving_goal.toString() : "");
-				if (profileResult.data.monthly_income_date) {
-					setMonthlyIncomeDate(new Date(profileResult.data.monthly_income_date));
-				}
+	useEffect(() => {
+		// Load profile when data is available
+		if (profile) {
+			setDisplayName(profile.display_name || "");
+			setPhoneNumber(profile.phone_number || "");
+			setMonthlyIncome(profile.monthly_income ? profile.monthly_income.toString() : "");
+			setMonthlySavingGoal(profile.monthly_saving_goal ? profile.monthly_saving_goal.toString() : "");
+			if (profile.monthly_income_date) {
+				setMonthlyIncomeDate(new Date(profile.monthly_income_date));
 			}
+		}
+	}, [profile]);
 
-			// Fetch user email from auth
+	useEffect(() => {
+		// Fetch user email from auth
+		const loadEmail = async () => {
 			const { data: authData } = await supabase.auth.getUser();
 			if (authData?.user?.email) {
 				setEmail(authData.user.email);
 			}
-		} catch (error) {
-			console.error("Error loading profile:", error);
-		} finally {
-			setLoading(false);
-		}
+		};
+		loadEmail();
 	}, []);
-
-	useEffect(() => {
-		// Load profile when modal appears
-		loadProfile();
-	}, [loadProfile]);
 
 	const handleClosePress = () => {
 		(ref as React.RefObject<BottomSheetModal>)?.current?.dismiss();
@@ -116,38 +109,41 @@ export const EditProfileBottomSheet = React.forwardRef<BottomSheetModal, EditPro
 				throw new Error("User not found");
 			}
 
-			const result = await updateProfile(user.id, {
+			const updates = {
 				display_name: displayName.trim(),
 				phone_number: phoneNumber.trim() ? phoneNumber.trim() : undefined,
 				monthly_income: monthlyIncome ? parseFloat(monthlyIncome) : null,
 				monthly_income_date: monthlyIncomeDate ? monthlyIncomeDate.toISOString().split("T")[0] : null,
 				monthly_saving_goal: monthlySavingGoal ? parseFloat(monthlySavingGoal) : null,
+			};
+
+			updateProfileMutation.mutate(updates, {
+				onSuccess: async (result) => {
+					// Schedule salary reminder if monthly income date is set
+					if (monthlyIncomeDate) {
+						const dayOfMonth = monthlyIncomeDate.getDate();
+						const monthlyIncome_num = monthlyIncome ? parseFloat(monthlyIncome) : undefined;
+						await scheduleSalaryReminder(dayOfMonth, monthlyIncome_num);
+					}
+
+					setAlertMessage("Profile updated successfully");
+					setAlertVariant("alert");
+					setAlertVisible(true);
+					if (result.success && result.data) {
+						onSuccess?.(result.data);
+					}
+					setTimeout(() => {
+						handleClosePress();
+					}, 1500);
+					setSaving(false);
+				},
+				onError: (error: any) => {
+					setAlertMessage(error?.message || "An error occurred while saving");
+					setAlertVariant("alert");
+					setAlertVisible(true);
+					setSaving(false);
+				},
 			});
-
-			setSaving(false);
-
-			if (result.success) {
-				// Schedule salary reminder if monthly income date is set
-				if (monthlyIncomeDate) {
-					const dayOfMonth = monthlyIncomeDate.getDate();
-					const monthlyIncome_num = monthlyIncome ? parseFloat(monthlyIncome) : undefined;
-					await scheduleSalaryReminder(dayOfMonth, monthlyIncome_num);
-				}
-
-				setAlertMessage("Profile updated successfully");
-				setAlertVariant("alert");
-				setAlertVisible(true);
-				if (result.data) {
-					onSuccess?.(result.data);
-				}
-				setTimeout(() => {
-					handleClosePress();
-				}, 1500);
-			} else {
-				setAlertMessage(result.error || result.message);
-				setAlertVariant("alert");
-				setAlertVisible(true);
-			}
 		} catch (error: any) {
 			setSaving(false);
 			setAlertMessage(error?.message || "An error occurred while saving");

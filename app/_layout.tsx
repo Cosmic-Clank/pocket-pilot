@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import "react-native-reanimated";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import ToastManager from "toastify-react-native";
@@ -82,6 +83,22 @@ export const unstable_settings = {
 
 SplashScreen.preventAutoHideAsync();
 
+// Create a client
+const queryClient = new QueryClient({
+	defaultOptions: {
+		queries: {
+			staleTime: 5 * 60 * 1000, // 5 minutes default
+			gcTime: 10 * 60 * 1000, // 10 minutes
+			retry: 2,
+			refetchOnWindowFocus: true,
+			refetchOnMount: true,
+		},
+		mutations: {
+			retry: 1,
+		},
+	},
+});
+
 export default function RootLayout() {
 	const colorScheme = useColorScheme();
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -144,25 +161,27 @@ export default function RootLayout() {
 	}
 
 	return (
-		<ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
-			<Stack screenOptions={{ headerShown: false }}>
-				<Stack.Protected guard={!isLoggedIn}>
-					<Stack.Screen name='welcome' />
-					<Stack.Screen name='create-account' />
-					<Stack.Screen name='forgot' />
-					<Stack.Screen name='verify-reset-password' />
-					<Stack.Screen name='verify-email' />
-				</Stack.Protected>
-				<Stack.Protected guard={isLoggedIn}>
-					<Stack.Screen name='(tabs)' options={{ headerShown: false }} />
-					<Stack.Screen name='modal' options={{ presentation: "modal", title: "Modal" }} />
-					<Stack.Screen name='weekly-report' />
-					<Stack.Screen name='reset-password' />
-				</Stack.Protected>
-			</Stack>
-			<StatusBar style='dark' backgroundColor='transparent' />
+		<QueryClientProvider client={queryClient}>
+			<ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
+				<Stack screenOptions={{ headerShown: false }}>
+					<Stack.Protected guard={!isLoggedIn}>
+						<Stack.Screen name='welcome' />
+						<Stack.Screen name='create-account' />
+						<Stack.Screen name='forgot' />
+						<Stack.Screen name='verify-reset-password' />
+						<Stack.Screen name='verify-email' />
+					</Stack.Protected>
+					<Stack.Protected guard={isLoggedIn}>
+						<Stack.Screen name='(tabs)' options={{ headerShown: false }} />
+						<Stack.Screen name='modal' options={{ presentation: "modal", title: "Modal" }} />
+						<Stack.Screen name='weekly-report' />
+						<Stack.Screen name='reset-password' />
+					</Stack.Protected>
+				</Stack>
+				<StatusBar style='dark' backgroundColor='transparent' />
 
-			<ToastManager config={toastConfig} />
-		</ThemeProvider>
+				<ToastManager config={toastConfig} />
+			</ThemeProvider>
+		</QueryClientProvider>
 	);
 }

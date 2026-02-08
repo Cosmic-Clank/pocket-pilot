@@ -8,10 +8,12 @@ import { ThemedButton } from "@/components/themed-button";
 import { ThemedAlert } from "@/components/themed-alert";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AddExpenseBottomSheet } from "@/components/expense/add-expense-bottom-sheet";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useMemo } from "react";
 import { supabase } from "@/utils/supabase";
-import { useFocusEffect } from "@react-navigation/native";
-import { fetchTransactions, calculateCurrentMonthBalance, calculateTotalBalance, type TransactionRecord } from "@/services/transaction-service";
+import { calculateCurrentMonthBalance, calculateTotalBalance, type TransactionRecord } from "@/services/transaction-service";
+import { useTransactions } from "@/hooks/queries/use-transactions";
+import { useQueryClient } from "@tanstack/react-query";
+import { TRANSACTIONS_QUERY_KEY } from "@/hooks/queries/use-transactions";
 
 type FeatherIconName = React.ComponentProps<typeof Feather>["name"];
 
@@ -42,68 +44,47 @@ const categoryIconMap: { [key: string]: FeatherIconName } = {
 
 export default function ExpenseScreen() {
 	const insets = useSafeAreaInsets();
+	const queryClient = useQueryClient();
 	const addExpenseModalRef = useRef<BottomSheetModal>(null);
-	const [expenses, setExpenses] = useState<Expense[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [totalSpent, setTotalSpent] = useState(0);
-	const [totalIncome, setTotalIncome] = useState(0);
-	const [monthlyBalance, setMonthlyBalance] = useState(0);
 	const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
 	const [detailVisible, setDetailVisible] = useState(false);
 	const [deleteAlertVisible, setDeleteAlertVisible] = useState(false);
 	const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
 	const [deleting, setDeleting] = useState(false);
 
-	useFocusEffect(
-		useCallback(() => {
-			fetchExpenses();
-		}, []),
-	);
+	// Fetch transactions using React Query
+	const { data: transactions = [], isLoading: loading } = useTransactions();
 
-	const fetchExpenses = async () => {
-		try {
-			setLoading(true);
-			const { data: authData } = await supabase.auth.getUser();
-			if (!authData?.user?.id) return;
+	// Format transactions into expenses
+	const expenses = useMemo(() => {
+		return transactions.map((transaction) => ({
+			id: transaction.id,
+			name: transaction.title,
+			category: transaction.category,
+			type: transaction.type,
+			amount: transaction.amount || 0,
+			icon: (categoryIconMap[transaction.category] || "tag") as FeatherIconName,
+			date: new Date(transaction.transaction_date).toLocaleDateString("en-US", {
+				day: "2-digit",
+				month: "2-digit",
+				year: "numeric",
+			}),
+			notes: transaction.notes || null,
+			transactionDate: transaction.transaction_date,
+			receiptUrl: transaction.receipt_url || null,
+		}));
+	}, [transactions]);
 
-			const { data, error } = await supabase.from("transactions").select("*").eq("user_id", authData.user.id).order("transaction_date", { ascending: false });
-
-			if (error) throw error;
-
-			const formattedExpenses: Expense[] = (data || []).map((transaction: any) => ({
-				id: transaction.id,
-				name: transaction.title,
-				category: transaction.category,
-				type: transaction.type,
-				amount: transaction.amount || 0,
-				icon: categoryIconMap[transaction.category] || "tag",
-				date: new Date(transaction.transaction_date).toLocaleDateString("en-US", {
-					day: "2-digit",
-					month: "2-digit",
-					year: "numeric",
-				}),
-				notes: transaction.notes || null,
-				transactionDate: transaction.transaction_date,
-				receiptUrl: transaction.receipt_url || null,
-			}));
-
-			setExpenses(formattedExpenses);
-
-			// Calculate all-time totals using calculateTotalBalance
-			const transactions = (data || []) as TransactionRecord[];
-			const totalBalanceData = calculateTotalBalance(transactions);
-			setTotalSpent(totalBalanceData.expenses);
-			setTotalIncome(totalBalanceData.income);
-
-			// Calculate current month balance separately
-			const monthBalanceData = calculateCurrentMonthBalance(transactions);
-			setMonthlyBalance(monthBalanceData.balance);
-		} catch (error) {
-			console.error("Failed to fetch expenses:", error);
-		} finally {
-			setLoading(false);
-		}
-	};
+	// Calculate totals
+	const { totalSpent, totalIncome, monthlyBalance } = useMemo(() => {
+		const totalBalanceData = calculateTotalBalance(transactions);
+		const monthBalanceData = calculateCurrentMonthBalance(transactions);
+		return {
+			totalSpent: totalBalanceData.expenses,
+			totalIncome: totalBalanceData.income,
+			monthlyBalance: monthBalanceData.balance,
+		};
+	}, [transactions]);
 
 	const handleSelectExpense = (expense: Expense) => {
 		setSelectedExpense(expense);
@@ -139,7 +120,9 @@ export default function ExpenseScreen() {
 			const { error } = await supabase.from("transactions").delete().eq("id", expenseToDelete.id).eq("user_id", authData.user.id);
 			if (error) throw error;
 
-			await fetchExpenses();
+			// Invalidate transactions query to trigger refetch
+			queryClient.invalidateQueries({ queryKey: TRANSACTIONS_QUERY_KEY });
+
 			setDeleteAlertVisible(false);
 			setExpenseToDelete(null);
 		} catch (err) {
@@ -260,8 +243,8 @@ export default function ExpenseScreen() {
 
 				<ThemedAlert visible={deleteAlertVisible} title='Delete transaction?' message={expenseToDelete ? `Remove "${expenseToDelete.name}" permanently?` : "Remove this transaction?"} variant='confirm' confirmText='Delete' cancelText='Cancel' onCancel={cancelDeleteExpense} onConfirm={confirmDeleteExpense} loading={deleting} />
 
-				{/* Bottom Sheet Modal */}
-				<AddExpenseBottomSheet ref={addExpenseModalRef} onClose={() => fetchExpenses()} onExpenseSuccess={() => addExpenseModalRef.current?.dismiss()} />
+			{/* Bottom Sheet Modal - Data auto-refreshes via React Query */}
+			<AddExpenseBottomSheet ref={addExpenseModalRef} onClose={() => {}} onExpenseSuccess={() => addExpenseModalRef.current?.dismiss()} />
 			</BottomSheetModalProvider>
 		</GestureHandlerRootView>
 	);

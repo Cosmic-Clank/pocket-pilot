@@ -3,9 +3,10 @@ import { Feather } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useState, useEffect } from "react";
+import { useMemo } from "react";
 import { ThemedText } from "@/components/themed-text";
-import { fetchTransactions, type TransactionRecord } from "@/services/transaction-service";
+import { useTransactions } from "@/hooks/queries/use-transactions";
+import type { TransactionRecord } from "@/services/transaction-service";
 import { computeWeeklyStats, type WeeklyStats } from "@/utils/weekly-analytics";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
@@ -13,27 +14,13 @@ const { width: SCREEN_WIDTH } = Dimensions.get("window");
 export default function WeeklyReportScreen() {
 	const router = useRouter();
 	const insets = useSafeAreaInsets();
-	const [loading, setLoading] = useState(true);
-	const [stats, setStats] = useState<WeeklyStats | null>(null);
+	
+	const { data: transactions = [], isLoading: loading } = useTransactions();
 
-	useEffect(() => {
-		loadWeeklyData();
-	}, []);
-
-	const loadWeeklyData = async () => {
-		try {
-			setLoading(true);
-			const result = await fetchTransactions();
-			if (result.success) {
-				const weeklyStats = computeWeeklyStats(result.data as TransactionRecord[]);
-				setStats(weeklyStats);
-			}
-		} catch (error) {
-			console.error("Weekly report error:", error);
-		} finally {
-			setLoading(false);
-		}
-	};
+	const stats = useMemo(() => {
+		if (transactions.length === 0) return null;
+		return computeWeeklyStats(transactions);
+	}, [transactions]);
 
 	const renderHeader = () => (
 		<LinearGradient colors={["#155DFC", "#432DD7"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.header, { paddingTop: insets.top + 16 }]}>

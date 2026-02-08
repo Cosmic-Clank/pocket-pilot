@@ -1,20 +1,22 @@
-import { useMemo, useRef, useState, useCallback } from "react";
+import { useMemo, useRef, useState, useEffect } from "react";
 import { StyleSheet, View } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { BottomSheetModalProvider, BottomSheetModal } from "@gorhom/bottom-sheet";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect } from "@react-navigation/native";
 import { ThemedScrollView } from "@/components/themed-scroll-view";
 import { ThemedButton } from "@/components/themed-button";
 import { ProfileHeader } from "@/components/profile/profile-header";
 import { ProfileMenuCard, type ProfileMenuItemConfig } from "@/components/profile/profile-menu-card";
+import { ProfilePicPicker } from "@/components/profile/profile-pic-picker";
 import { EditProfileBottomSheet } from "@/components/profile/edit-profile-bottom-sheet";
 import { SettingsBottomSheet } from "@/components/profile/settings-bottom-sheet";
 import { SecurityBottomSheet } from "@/components/profile/security-bottom-sheet";
-import { fetchProfile, type ProfileRecord } from "@/services/profile-service";
+import { type ProfileRecord } from "@/services/profile-service";
 import { supabase } from "@/utils/supabase";
+import { useProfile } from "@/hooks/queries/use-profile";
+import { useUpdateProfilePicture, useDeleteProfilePicture } from "@/hooks/mutations/use-profile-mutations";
 
 // Export options for tab configuration
 export const screenOptions = {
@@ -34,37 +36,27 @@ export default function ProfileScreen() {
 	const settingsModalRef = useRef<BottomSheetModal>(null);
 	const securityModalRef = useRef<BottomSheetModal>(null);
 
-	const [profile, setProfile] = useState<ProfileRecord | null>(null);
 	const [userEmail, setUserEmail] = useState("");
-	const [loading, setLoading] = useState(true);
+	const [uploadingPhoto, setUploadingPhoto] = useState(false);
+	const [showPhotoOptions, setShowPhotoOptions] = useState(false);
 
-	const loadProfile = useCallback(async () => {
-		try {
-			setLoading(true);
+	// Fetch profile using React Query
+	const { data: profile, isLoading: loading } = useProfile();
 
-			// Fetch profile data
-			const profileResult = await fetchProfile();
-			if (profileResult.success && profileResult.data) {
-				setProfile(profileResult.data);
-			}
+	// Profile picture mutations
+	const updateProfilePicMutation = useUpdateProfilePicture();
+	const deleteProfilePicMutation = useDeleteProfilePicture();
 
-			// Fetch user email from auth
+	// Fetch user email from auth
+	useEffect(() => {
+		const loadEmail = async () => {
 			const { data: authData } = await supabase.auth.getUser();
 			if (authData?.user?.email) {
 				setUserEmail(authData.user.email);
 			}
-		} catch (error) {
-			console.error("Error loading profile:", error);
-		} finally {
-			setLoading(false);
-		}
+		};
+		loadEmail();
 	}, []);
-
-	useFocusEffect(
-		useCallback(() => {
-			loadProfile();
-		}, [loadProfile]),
-	);
 
 	const handleSignOut = async () => {
 		try {
@@ -73,6 +65,33 @@ export default function ProfileScreen() {
 		} catch (error) {
 			console.error("Sign out error:", error);
 		}
+	};
+
+	const handleProfilePicSelected = (base64: string) => {
+		setUploadingPhoto(true);
+		updateProfilePicMutation.mutate(
+			{ base64 },
+			{
+				onSuccess: () => {
+					setUploadingPhoto(false);
+				},
+				onError: () => {
+					setUploadingPhoto(false);
+				},
+			}
+		);
+	};
+
+	const handleRemovePhoto = () => {
+		setUploadingPhoto(true);
+		deleteProfilePicMutation.mutate(undefined, {
+			onSuccess: () => {
+				setUploadingPhoto(false);
+			},
+			onError: () => {
+				setUploadingPhoto(false);
+			},
+		});
 	};
 
 	const menuItems = useMemo<ProfileMenuItemConfig[]>(
@@ -99,28 +118,25 @@ export default function ProfileScreen() {
 		[],
 	);
 
-	const handleProfileUpdateSuccess = (updatedProfile: ProfileRecord) => {
-		setProfile(updatedProfile);
-	};
-
 	return (
 		<GestureHandlerRootView style={styles.gestureContainer}>
 			<BottomSheetModalProvider>
 				<View style={styles.container}>
 					<ThemedScrollView style={styles.scrollView}>
-						<ProfileHeader name={profile?.display_name || "User"} email={userEmail || "No email"} />
+						<ProfileHeader name={profile?.display_name || "User"} email={userEmail || "No email"} profilePic={profile?.profile_pic} onChangePhoto={() => setShowPhotoOptions(true)} />
 
 						<View style={styles.body}>
+							<ProfilePicPicker onImageSelected={handleProfilePicSelected} onRemovePhoto={handleRemovePhoto} hasExistingPhoto={!!profile?.profile_pic} showOptions={showPhotoOptions} onDismiss={() => setShowPhotoOptions(false)} />
+
 							<ProfileMenuCard items={menuItems} />
 
-							<ThemedButton title='Logout' variant='outline' icon={<Feather name='log-out' size={18} color='#EF4444' />} onPress={handleSignOut} textStyle={{ color: "#EF4444" }} style={styles.logoutButton} />
+							<ThemedButton title='Logout' variant='outline' icon={<Feather name='log-out' size={18} color='#EF4444' />} onPress={handleSignOut} textStyle={{ color: "#EF4444" }} style={styles.logoutButton} disabled={uploadingPhoto} />
 						</View>
-
-						<View style={{ height: 40 }} />
 					</ThemedScrollView>
 				</View>
 
-				<EditProfileBottomSheet ref={editProfileModalRef} onClose={() => {}} onSuccess={handleProfileUpdateSuccess} />
+				{/* Profile will automatically update via React Query */}
+				<EditProfileBottomSheet ref={editProfileModalRef} onClose={() => {}} />
 				<SettingsBottomSheet ref={settingsModalRef} onClose={() => {}} />
 				<SecurityBottomSheet ref={securityModalRef} onClose={() => {}} />
 			</BottomSheetModalProvider>
