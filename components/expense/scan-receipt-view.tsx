@@ -187,7 +187,7 @@ export const ScanReceiptView = ({ onExpenseSuccess }: ScanReceiptViewProps) => {
 			)}
 
 			{/* Info Text */}
-			<ThemedText style={styles.infoText}>After scanning, you'll be able to verify and edit the extracted information before saving.</ThemedText>
+			<ThemedText style={styles.infoText}>After scanning, you&apos;ll be able to verify and edit the extracted information before saving.</ThemedText>
 
 			{/* Process Button */}
 			<ThemedButton title={processing ? "Processing..." : "Process Receipt"} variant='primary' style={styles.saveButton} disabled={!capturedImage || processing} onPress={handleProcess} loading={processing} />

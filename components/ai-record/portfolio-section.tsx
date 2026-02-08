@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
+import { SkeletonPulse } from "@/components/ui/skeleton-pulse";
 import { useStockTrades } from "@/hooks/queries/use-stock-trades";
 import { API_CONFIG } from "@/constants/config";
 
@@ -170,7 +171,19 @@ export function PortfolioSection() {
 	if (loading) {
 		return (
 			<View style={styles.card}>
-				<ActivityIndicator size='small' color='#432DD7' />
+				<View style={{ gap: 16 }}>
+					<SkeletonPulse width="50%" height={18} borderRadius={4} />
+					<SkeletonPulse width="70%" height={14} borderRadius={4} />
+					<View style={{ marginTop: 8 }}>
+						{[1, 2, 3].map((i) => (
+							<View key={i} style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: 8, gap: 12 }}>
+								<SkeletonPulse width="40%" height={14} borderRadius={4} />
+								<SkeletonPulse width="30%" height={14} borderRadius={4} />
+								<SkeletonPulse width="20%" height={14} borderRadius={4} />
+							</View>
+						))}
+					</View>
+				</View>
 			</View>
 		);
 	}

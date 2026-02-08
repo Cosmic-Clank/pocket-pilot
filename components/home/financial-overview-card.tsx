@@ -1,6 +1,7 @@
 import { View, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
+import { SkeletonPulse } from "@/components/ui/skeleton-pulse";
 import { useMemo } from "react";
 import { calculateTotalBalance } from "@/services/transaction-service";
 import { useTransactions } from "@/hooks/queries/use-transactions";
@@ -21,26 +22,48 @@ export function FinancialOverviewCard() {
 
 	return (
 		<View style={styles.card}>
-			<ThemedText style={styles.cardLabel}>Total Balance</ThemedText>
-			<ThemedText style={styles.balanceAmount}>{loading ? "..." : `AED ${totalBalance.toFixed(2)}`}</ThemedText>
-
-			<View style={styles.statsRow}>
-				<View style={styles.statItem}>
-					<View style={styles.statHeader}>
-						<Feather name='trending-up' size={16} color='#10B981' />
-						<ThemedText style={styles.statLabel}>Income</ThemedText>
+			{loading ? (
+				// Skeleton loading state
+				<>
+					<SkeletonPulse height={14} width="40%" style={{ marginBottom: 12 }} borderRadius={4} />
+					<SkeletonPulse height={40} width="60%" style={{ marginBottom: 24 }} borderRadius={8} />
+					
+					<View style={styles.statsRow}>
+						<View style={styles.statItem}>
+							<SkeletonPulse height={16} width="70%" style={{ marginBottom: 12 }} borderRadius={4} />
+							<SkeletonPulse height={24} width="80%" borderRadius={6} />
+						</View>
+						<View style={styles.statItem}>
+							<SkeletonPulse height={16} width="70%" style={{ marginBottom: 12 }} borderRadius={4} />
+							<SkeletonPulse height={24} width="80%" borderRadius={6} />
+						</View>
 					</View>
-					<ThemedText style={styles.incomeAmount}>{loading ? "..." : `AED ${income.toFixed(2)}`}</ThemedText>
-				</View>
+				</>
+			) : (
+				// Actual content
+				<>
+					<ThemedText style={styles.cardLabel}>Total Balance</ThemedText>
+					<ThemedText style={styles.balanceAmount}>{`AED ${totalBalance.toFixed(2)}`}</ThemedText>
 
-				<View style={styles.statItem}>
-					<View style={styles.statHeader}>
-						<Feather name='trending-down' size={16} color='#EF4444' />
-						<ThemedText style={styles.statLabel}>Expenses</ThemedText>
+					<View style={styles.statsRow}>
+						<View style={styles.statItem}>
+							<View style={styles.statHeader}>
+								<Feather name='trending-up' size={16} color='#10B981' />
+								<ThemedText style={styles.statLabel}>Income</ThemedText>
+							</View>
+							<ThemedText style={styles.incomeAmount}>{`AED ${income.toFixed(2)}`}</ThemedText>
+						</View>
+
+						<View style={styles.statItem}>
+							<View style={styles.statHeader}>
+								<Feather name='trending-down' size={16} color='#EF4444' />
+								<ThemedText style={styles.statLabel}>Expenses</ThemedText>
+							</View>
+							<ThemedText style={styles.expenseAmount}>{`AED ${expenses.toFixed(2)}`}</ThemedText>
+						</View>
 					</View>
-					<ThemedText style={styles.expenseAmount}>{loading ? "..." : `AED ${expenses.toFixed(2)}`}</ThemedText>
-				</View>
-			</View>
+				</>
+			)}
 		</View>
 	);
 }

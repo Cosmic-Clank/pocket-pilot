@@ -3,10 +3,13 @@ import { StyleSheet, View, Pressable, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Feather } from "@expo/vector-icons";
 import { Toast } from "toastify-react-native";
+import { useQueryClient } from "@tanstack/react-query";
 import { ThemedText } from "@/components/themed-text";
 import { supabase } from "@/utils/supabase";
 import { useProfile } from "@/hooks/queries/use-profile";
 import { useTransactions } from "@/hooks/queries/use-transactions";
+import { TRANSACTIONS_QUERY_KEY } from "@/hooks/queries/use-transactions";
+import { PROFILE_QUERY_KEY } from "@/hooks/queries/use-profile";
 import { useAddTransaction } from "@/hooks/mutations/use-transaction-mutations";
 import type { ProfileRecord } from "@/services/profile-service";
 import type { TransactionRecord } from "@/services/transaction-service";
@@ -18,6 +21,7 @@ interface SalaryDayCardProps {
 export const SalaryDayCard: React.FC<SalaryDayCardProps> = ({ onSalaryAdded }) => {
 	const [shouldShow, setShouldShow] = useState(false);
 	const [loading, setLoading] = useState(false);
+	const queryClient = useQueryClient();
 
 	const { data: profile } = useProfile();
 	const { data: transactions = [] } = useTransactions();
@@ -136,6 +140,10 @@ export const SalaryDayCard: React.FC<SalaryDayCardProps> = ({ onSalaryAdded }) =
 					Toast.success(`Emergency fund increased by AED ${profile.emergency_fund_auto_invest.toFixed(2)}`);
 				}
 			}
+
+			// Invalidate queries to refresh data
+			await queryClient.invalidateQueries({ queryKey: TRANSACTIONS_QUERY_KEY });
+			await queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEY });
 
 			// Hide the card after successful addition
 			setShouldShow(false);

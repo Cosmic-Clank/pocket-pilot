@@ -168,7 +168,7 @@ export function BudgetAlertModal({ visible, onClose, budgets, transactions }: Bu
 									{budget.status === "danger" && (
 										<View style={styles.alertBox}>
 											<Feather name='alert-circle' size={16} color='#EF4444' />
-											<ThemedText style={styles.alertText}>You've exceeded this budget by AED {(budget.spent - budget.budgetAmount).toFixed(0)}</ThemedText>
+											<ThemedText style={styles.alertText}>You&apos;ve exceeded this budget by AED {(budget.spent - budget.budgetAmount).toFixed(0)}</ThemedText>
 										</View>
 									)}
 

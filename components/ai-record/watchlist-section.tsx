@@ -2,6 +2,7 @@ import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Alert } from "re
 import { useEffect, useState, useMemo } from "react";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
+import { SkeletonPulse } from "@/components/ui/skeleton-pulse";
 import { type WatchlistRecord } from "@/services/stock-watchlist-service";
 import { API_CONFIG, getApiUrl } from "@/constants/config";
 import { useWatchlist } from "@/hooks/queries/use-watchlist";
@@ -109,7 +110,23 @@ export function WatchlistSection() {
 	if (loading) {
 		return (
 			<View style={styles.loadingContainer}>
-				<ActivityIndicator size='small' color='#155DFC' />
+				<>
+					{[1, 2, 3].map((i) => (
+						<View key={i} style={styles.watchlistItemSkeleton}>
+							<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+								<View style={{ flex: 1 }}>
+									<SkeletonPulse width="40%" height={16} borderRadius={4} style={{ marginBottom: 6 }} />
+									<SkeletonPulse width="60%" height={14} borderRadius={4} />
+								</View>
+								<SkeletonPulse width={40} height={40} borderRadius={8} />
+							</View>
+							<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+								<SkeletonPulse width="50%" height={14} borderRadius={4} />
+								<SkeletonPulse width={24} height={24} borderRadius={4} />
+							</View>
+						</View>
+					))}
+				</>
 			</View>
 		);
 	}
@@ -298,5 +315,11 @@ const styles = StyleSheet.create({
 		fontSize: 13,
 		fontWeight: "600",
 		color: "#EF4444",
+	},
+	watchlistItemSkeleton: {
+		flex: 1,
+		borderBottomWidth: 1,
+		borderBottomColor: "#F0F0F0",
+		paddingVertical: 12,
 	},
 });

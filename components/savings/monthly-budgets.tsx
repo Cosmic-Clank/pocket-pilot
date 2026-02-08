@@ -1,7 +1,8 @@
-import { View, StyleSheet, ActivityIndicator } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedButton } from "@/components/themed-button";
+import { SkeletonPulse } from "@/components/ui/skeleton-pulse";
 import { type BudgetRecord } from "@/services/budget-service";
 import { type TransactionRecord } from "@/services/transaction-service";
 import { CATEGORY_ICON_MAP } from "@/constants/config";
@@ -53,10 +54,24 @@ export function MonthlyBudgets({ onAddBudgetPress, showHeader = true, limit }: M
 
 			{/* Budget Items - Dynamic Rendering */}
 			{loading ? (
-				<View style={styles.loadingContainer}>
-					<ActivityIndicator size='large' color='#155DFC' />
-				</View>
-			) : budgets.length === 0 ? (
+			<>
+				{[1, 2, 3].map((i) => (
+					<View key={i} style={styles.budgetItemCard}>
+						<View style={styles.budgetItem}>
+							<View style={styles.budgetItemLeft}>
+								<SkeletonPulse width={40} height={40} borderRadius={10} />
+								<View style={{ flex: 1, gap: 6 }}>
+									<SkeletonPulse width="60%" height={14} borderRadius={4} />
+									<SkeletonPulse width="80%" height={12} borderRadius={4} />
+								</View>
+							</View>
+							<SkeletonPulse width={40} height={16} borderRadius={4} />
+						</View>
+						<SkeletonPulse width="100%" height={12} borderRadius={999} style={{ marginBottom: 16 }} />
+					</View>
+				))}
+			</>
+		) : budgets.length === 0 ? (
 				<ThemedText style={styles.emptyBudgetText}>No budgets set yet. Create your first budget!</ThemedText>
 			) : (
 				(limit ? budgets.slice(0, limit) : budgets).map((budget) => {
@@ -89,7 +104,7 @@ export function MonthlyBudgets({ onAddBudgetPress, showHeader = true, limit }: M
 
 							{percentage >= 90 && (
 								<View style={styles.warningBox}>
-									<ThemedText style={styles.warningText}>You're near your budget limit</ThemedText>
+								<ThemedText style={styles.warningText}>You&apos;re near your budget limit</ThemedText>
 								</View>
 							)}
 						</View>
@@ -188,10 +203,5 @@ const styles = StyleSheet.create({
 		textAlign: "center",
 		paddingVertical: 24,
 		fontStyle: "italic",
-	},
-	loadingContainer: {
-		paddingVertical: 40,
-		alignItems: "center",
-		justifyContent: "center",
 	},
 });

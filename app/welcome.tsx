@@ -28,31 +28,17 @@ export default function WelcomeBackScreen() {
 
 		setLoading(true);
 		try {
-			// Step 1: Request OTP from backend
-			const otpResponse = await fetch("http://localhost:8000/api/auth/login-otp", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ email: email.trim() }),
+			const { error } = await supabase.auth.signInWithPassword({
+				email: email.trim(),
+				password,
 			});
 
-			if (!otpResponse.ok) {
-				const errorData = await otpResponse.json();
-				setAlert({ visible: true, title: "Error", message: errorData.detail || "Failed to send OTP" });
-				setLoading(false);
-				return;
+			if (error) {
+				setAlert({ visible: true, title: "Login Failed", message: error.message });
+			} else {
+				Toast.success("Logged in successfully!", "bottom");
+				router.replace("/(tabs)");
 			}
-
-			// Step 2: Store credentials temporarily and navigate to OTP verification
-			if (typeof window !== "undefined" && window.sessionStorage) {
-				window.sessionStorage.setItem("login_email", email.trim());
-				window.sessionStorage.setItem("login_password", password);
-			}
-
-			Toast.success("OTP sent to your email!", "bottom");
-			router.push({
-				pathname: "/verify-login-otp",
-				params: { email: email.trim() },
-			});
 		} catch (err) {
 			setAlert({ visible: true, title: "Error", message: "An unexpected error occurred" });
 			console.error("Sign in error:", err);

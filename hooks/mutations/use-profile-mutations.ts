@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient, type UseMutationResult } from "@tanstack/react-query";
 import { 
-	updateProfile, 
+	updateProfileLegacy, 
 	updateEmergencyFundAutoInvest,
 	updateEmergencyFundAmount,
 	updateProfilePicture,
@@ -25,7 +25,7 @@ export function useUpdateProfile(): UseMutationResult<UpdateProfileResult, Error
 
 	return useMutation({
 		mutationFn: async (params: UpdateProfileParams) => {
-			return await updateProfile(params);
+			return await updateProfileLegacy(params);
 		},
 		onSuccess: (data) => {
 			if (data.success) {

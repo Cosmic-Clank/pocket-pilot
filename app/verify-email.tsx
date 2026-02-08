@@ -75,7 +75,7 @@ export default function VerifyEmailScreen() {
 				<ThemedText type='title' style={styles.title}>
 					Verify Your Email
 				</ThemedText>
-				<ThemedText style={styles.subtitle}>We've sent a 6-digit code to {email}</ThemedText>
+				<ThemedText style={styles.subtitle}>We&apos;ve sent a 6-digit code to {email}</ThemedText>
 			</View>
 
 			<View style={styles.illustration}>
@@ -99,7 +99,7 @@ export default function VerifyEmailScreen() {
 			<ThemedButton title='Verify Email' variant='primary' style={styles.verifyButton} loading={loading} disabled={code.length !== 6 || loading} onPress={handleVerify} />
 
 			<View style={styles.resendContainer}>
-				<Text style={styles.resendText}>Didn't receive the code? </Text>
+				<Text style={styles.resendText}>Didn&apos;t receive the code? </Text>
 				<ThemedButton title='Resend' variant='text' style={styles.resendButton} loading={resendLoading} disabled={resendLoading} onPress={handleResend} />
 			</View>
 

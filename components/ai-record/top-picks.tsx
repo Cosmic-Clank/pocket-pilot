@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
 import { ThemedButton } from "@/components/themed-button";
 import { ThemedAlert } from "@/components/themed-alert";
+import { SkeletonPulse } from "@/components/ui/skeleton-pulse";
 import { isInWatchlist } from "@/services/stock-watchlist-service";
 import { useTransactions } from "@/hooks/queries/use-transactions";
 import { useBudgets } from "@/hooks/queries/use-budgets";
@@ -40,9 +41,24 @@ export function TopPicksSection() {
 			) : null}
 
 			{loading ? (
-				<View style={styles.loadingBox}>
-					<ActivityIndicator size='small' color='#432DD7' />
-				</View>
+				<>
+					{[1, 2, 3].map((i) => (
+						<View key={i} style={styles.skeletonCard}>
+							<View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+								<View style={{ flex: 1 }}>
+									<SkeletonPulse width="40%" height={16} borderRadius={4} style={{ marginBottom: 6 }} />
+									<SkeletonPulse width="60%" height={20} borderRadius={4} />
+								</View>
+								<SkeletonPulse width={40} height={40} borderRadius={8} />
+							</View>
+							<SkeletonPulse width="100%" height={12} borderRadius={4} style={{ marginBottom: 12 }} />
+							<View style={{ flexDirection: "row", gap: 8 }}>
+								<SkeletonPulse width="48%" height={36} borderRadius={8} />
+								<SkeletonPulse width="48%" height={36} borderRadius={8} />
+							</View>
+						</View>
+					))}
+				</>
 			) : (
 				picks.map((pick) => <StockCard key={pick.id} pick={pick} />)
 			)}
@@ -252,6 +268,15 @@ const styles = StyleSheet.create({
 		fontWeight: "600",
 	},
 	card: {
+		backgroundColor: "#FAFDFF",
+		borderRadius: 16,
+		padding: 16,
+		marginBottom: 16,
+		marginHorizontal: 30,
+		borderWidth: 1,
+		borderColor: "#E5E7EB",
+	},
+	skeletonCard: {
 		backgroundColor: "#FAFDFF",
 		borderRadius: 16,
 		padding: 16,

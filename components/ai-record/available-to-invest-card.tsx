@@ -1,8 +1,9 @@
-import { View, StyleSheet, ActivityIndicator } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { useMemo } from "react";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { ThemedText } from "@/components/themed-text";
+import { SkeletonPulse } from "@/components/ui/skeleton-pulse";
 import { useTransactions } from "@/hooks/queries/use-transactions";
 import { useBudgets } from "@/hooks/queries/use-budgets";
 import { useStockTrades } from "@/hooks/queries/use-stock-trades";
@@ -35,19 +36,30 @@ export function AvailableToInvestCard() {
 			<View style={styles.content}>
 				<View style={styles.left}>
 					<ThemedText style={styles.label}>Monthly Saving (after budgets)</ThemedText>
+				{loading ? (
+					<SkeletonPulse width="80%" height={28} borderRadius={6} style={{ marginTop: 8 }} />
+				) : (
 					<ThemedText type='defaultSemiBold' style={styles.amount}>
-						AED {loading ? "..." : availableAmount.toFixed(0)}
+						AED {availableAmount.toFixed(0)}
 					</ThemedText>
-				</View>
-				<View style={styles.icon}>
-					<MaterialCommunityIcons name='piggy-bank-outline' size={32} color='#FFFFFF' />
-				</View>
+				)}
 			</View>
-			<View style={styles.statsContainer}>
-
-				<View style={styles.statItem}>
-					<ThemedText style={styles.statLabel}>Already Invested</ThemedText>
-					<ThemedText style={styles.statValue}>AED {loading ? "..." : alreadyInvested.toFixed(2)}</ThemedText>
+			<View style={styles.icon}>
+				{loading ? (
+					<SkeletonPulse width={56} height={56} borderRadius={12} />
+				) : (
+					<MaterialCommunityIcons name='piggy-bank-outline' size={32} color='#FFFFFF' />
+				)}
+			</View>
+		</View>
+		<View style={styles.statsContainer}>
+			<View style={styles.statItem}>
+				<ThemedText style={styles.statLabel}>Already Invested</ThemedText>
+				{loading ? (
+					<SkeletonPulse width="70%" height={18} borderRadius={4} style={{ marginTop: 6 }} />
+				) : (
+					<ThemedText style={styles.statValue}>AED {alreadyInvested.toFixed(2)}</ThemedText>
+				)}
 				</View>
 			</View>
 		</LinearGradient>

@@ -79,7 +79,7 @@ export default function HomeScreen() {
 				<LinearGradient colors={["#155DFC", "#432DD7"]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.header, { paddingTop: insets.top + 20 }]}>
 					<View style={styles.headerContent}>
 						<View>
-							<ThemedText style={styles.welcomeText}>Welcome {profile?.display_name ? profile.display_name.charAt(0).toUpperCase() + profile.display_name.slice(1) + "!" : 'Back'}</ThemedText>
+							<ThemedText style={styles.welcomeText}>Welcome {profile?.display_name ? profile.display_name.charAt(0).toUpperCase() + profile.display_name.slice(1) + "! 👋" : 'Back'}</ThemedText>
 							<ThemedText style={styles.subtitleText}>Here is your financial overview</ThemedText>
 						</View>
 						<Pressable style={styles.notificationButton} onPress={() => setShowNotifications(true)}>

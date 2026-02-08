@@ -59,6 +59,8 @@ export const AddExpenseBottomSheet = React.forwardRef<BottomSheetModal, AddExpen
 	);
 });
 
+AddExpenseBottomSheet.displayName = "AddExpenseBottomSheet";
+
 const styles = StyleSheet.create({
 	bottomSheet: {
 		zIndex: 100,
