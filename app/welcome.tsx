@@ -26,25 +26,14 @@ export default function WelcomeBackScreen() {
 			return;
 		}
 
-		setLoading(true);
-		try {
-			const { error } = await supabase.auth.signInWithPassword({
+		// Redirect to MFA page with email and password
+		router.push({
+			pathname: "/login-mfa",
+			params: {
 				email: email.trim(),
-				password,
-			});
-
-			if (error) {
-				setAlert({ visible: true, title: "Login Failed", message: error.message });
-			} else {
-				Toast.success("Logged in successfully!", "bottom");
-				router.replace("/(tabs)");
-			}
-		} catch (err) {
-			setAlert({ visible: true, title: "Error", message: "An unexpected error occurred" });
-			console.error("Sign in error:", err);
-		} finally {
-			setLoading(false);
-		}
+				password: password,
+			},
+		});
 	};
 
 	return (
