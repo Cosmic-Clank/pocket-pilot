@@ -132,9 +132,7 @@ export const EditProfileBottomSheet = React.forwardRef<BottomSheetModal, EditPro
 					if (result.success && result.data) {
 						onSuccess?.(result.data);
 					}
-					setTimeout(() => {
-						handleClosePress();
-					}, 1500);
+
 					setSaving(false);
 				},
 				onError: (error: any) => {
