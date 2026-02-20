@@ -20,17 +20,48 @@ export default function WelcomeBackScreen() {
 	const [loading, setLoading] = useState(false);
 	const [alert, setAlert] = useState({ visible: false, title: "", message: "" });
 
+	const REVIEW_BYPASS_EMAIL = "reviewtest@pocketpilot.com";
+	const REVIEW_BYPASS_PASSWORD = "reviewtest";
+
 	const handleSignIn = async () => {
 		if (!email.trim() || !password.trim()) {
 			setAlert({ visible: true, title: "Error", message: "Please fill in all fields" });
 			return;
 		}
 
+		const normalizedEmail = email.trim();
+		const isReviewBypass = normalizedEmail.toLowerCase() === REVIEW_BYPASS_EMAIL && password === REVIEW_BYPASS_PASSWORD;
+
+		if (isReviewBypass) {
+			setLoading(true);
+			try {
+				const { error } = await supabase.auth.signInWithPassword({
+					email: normalizedEmail,
+					password,
+				});
+
+				if (error) {
+					setAlert({ visible: true, title: "Login Failed", message: "Your username or password is incorrect." });
+					return;
+				}
+
+				Toast.success("Logged in successfully!", "bottom");
+				router.replace("/welcome");
+				return;
+			} catch (err: any) {
+				console.error("Store review bypass sign-in failed:", err);
+				setAlert({ visible: true, title: "Error", message: err?.message || "An unexpected error occurred" });
+				return;
+			} finally {
+				setLoading(false);
+			}
+		}
+
 		// Redirect to MFA page with email and password
 		router.push({
 			pathname: "/login-mfa",
 			params: {
-				email: email.trim(),
+				email: normalizedEmail,
 				password: password,
 			},
 		});
