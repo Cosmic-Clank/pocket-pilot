@@ -1,5 +1,5 @@
 [auth.external.google]
 enabled = true
-client_id = "839702511871-q094sfunbe900ogttnd9imp4go0llpak.apps.googleusercontent.com,839702511871-f04ehkppjm4qt9m2eqngbarqfq2ghn81.apps.googleusercontent.com"
+client_id = "839702511871-q094sfunbe900ogttnd9imp4go0llpak.apps.googleusercontent.com,839702511871-f04ehkppjm4qt9m2eqngbarqfq2ghn81.apps.googleusercontent.com,839702511871-32s502ilpnr9tdn70cu2du0niicrgcvk.apps.googleusercontent.com"
 secret = "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_SECRET)"
 skip_nonce_check = false
